@@ -1,0 +1,205 @@
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<style>
+    .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; }
+    .status-New { background-color: #e3f2fd; color: #1976d2; }
+    .status-Contacted { background-color: #fff3e0; color: #f57c00; }
+    .status-Interested { background-color: #f3e5f5; color: #7b1fa2; }
+    .status-Converted { background-color: #e8f5e9; color: #388e3c; }
+    .status-Lost { background-color: #ffebee; color: #d32f2f; }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-users"></i> Leads Management</h3>
+    <div>
+        <button class="btn btn-outline-primary me-2" onclick="document.getElementById('csvInput').click()">
+            <i class="fas fa-upload"></i> Import CSV
+        </button>
+        <input type="file" id="csvInput" accept=".csv" style="display:none;" onchange="importCSV(event)">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLeadModal">
+            <i class="fas fa-plus"></i> Add Lead
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table id="leadsTable" class="table table-striped">
+            <thead>
+                <tr><th>Name</th><th>Phone</th><th>Email</th><th>Company</th><th>Status</th><th>Tags</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="leadsTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Lead Modal -->
+<div class="modal fade" id="addLeadModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Add Lead</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="text" id="leadName" class="form-control mb-3" placeholder="Name *">
+        <input type="tel" id="leadPhone" class="form-control mb-3" placeholder="Phone *">
+        <input type="email" id="leadEmail" class="form-control mb-3" placeholder="Email">
+        <input type="text" id="leadCompany" class="form-control mb-3" placeholder="Company">
+        <select id="leadStatus" class="form-select mb-3">
+            <option>New</option><option>Contacted</option><option>Interested</option><option>Converted</option><option>Lost</option>
+        </select>
+        <input type="text" id="leadTags" class="form-control" placeholder="Tags (comma separated)">
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="addLead()">Save</button>
+    </div>
+</div></div></div>
+
+<!-- Edit Lead Modal -->
+<div class="modal fade" id="editLeadModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Edit Lead</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" id="editLeadId">
+        <input type="text" id="editLeadName" class="form-control mb-3" placeholder="Name *">
+        <input type="tel" id="editLeadPhone" class="form-control mb-3" placeholder="Phone *">
+        <input type="email" id="editLeadEmail" class="form-control mb-3" placeholder="Email">
+        <input type="text" id="editLeadCompany" class="form-control mb-3" placeholder="Company">
+        <select id="editLeadStatus" class="form-select mb-3">
+            <option>New</option><option>Contacted</option><option>Interested</option><option>Converted</option><option>Lost</option>
+        </select>
+        <input type="text" id="editLeadTags" class="form-control" placeholder="Tags (comma separated)">
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="updateLead()">Update</button>
+    </div>
+</div></div></div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+let leadsDataTable;
+
+async function loadLeads() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+    
+    if (leads) {
+        const html = leads.map(lead => `
+            <tr>
+                <td>${lead.name}</td>
+                <td>${lead.phone}</td>
+                <td>${lead.email || '-'}</td>
+                <td>${lead.company || '-'}</td>
+                <td><span class="status-badge status-${lead.status}">${lead.status}</span></td>
+                <td>${lead.tags || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="openWhatsApp('${lead.phone}')"><i class="fab fa-whatsapp"></i></button>
+                    <button class="btn btn-sm btn-primary" onclick="editLead(${lead.id})"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteLead(${lead.id})"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+        
+        document.getElementById('leadsTableBody').innerHTML = html;
+        if (leadsDataTable) leadsDataTable.destroy();
+        leadsDataTable = $('#leadsTable').DataTable();
+    }
+}
+
+window.addLead = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { error } = await window.supabase.from('leads').insert([{
+        user_id: user.id,
+        name: document.getElementById('leadName').value,
+        phone: document.getElementById('leadPhone').value,
+        email: document.getElementById('leadEmail').value,
+        company: document.getElementById('leadCompany').value,
+        status: document.getElementById('leadStatus').value,
+        tags: document.getElementById('leadTags').value
+    }]);
+    
+    if (error) { alert(error.message); } else {
+        $('#addLeadModal').modal('hide');
+        loadLeads();
+    }
+};
+
+window.editLead = async function(id) {
+    const { data: lead } = await window.supabase.from('leads').select('*').eq('id', id).single();
+    if (lead) {
+        document.getElementById('editLeadId').value = lead.id;
+        document.getElementById('editLeadName').value = lead.name;
+        document.getElementById('editLeadPhone').value = lead.phone;
+        document.getElementById('editLeadEmail').value = lead.email || '';
+        document.getElementById('editLeadCompany').value = lead.company || '';
+        document.getElementById('editLeadStatus').value = lead.status;
+        document.getElementById('editLeadTags').value = lead.tags || '';
+        $('#editLeadModal').modal('show');
+    }
+};
+
+window.updateLead = async function() {
+    const id = document.getElementById('editLeadId').value;
+    const { error } = await window.supabase.from('leads').update({
+        name: document.getElementById('editLeadName').value,
+        phone: document.getElementById('editLeadPhone').value,
+        email: document.getElementById('editLeadEmail').value,
+        company: document.getElementById('editLeadCompany').value,
+        status: document.getElementById('editLeadStatus').value,
+        tags: document.getElementById('editLeadTags').value
+    }).eq('id', id);
+    
+    if (error) { alert(error.message); } else {
+        $('#editLeadModal').modal('hide');
+        loadLeads();
+    }
+};
+
+window.deleteLead = async function(id) {
+    if (confirm('Delete this lead?')) {
+        await window.supabase.from('leads').delete().eq('id', id);
+        loadLeads();
+    }
+};
+
+window.openWhatsApp = function(phone) {
+    window.open('https://wa.me/' + phone.replace(/[^0-9]/g, ''), '_blank');
+};
+
+window.importCSV = function(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        const lines = e.target.result.split('\n');
+        const { data: { user } } = await window.supabase.auth.getUser();
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const v = lines[i].split(',');
+            await window.supabase.from('leads').insert([{
+                user_id: user.id,
+                name: v[0]?.trim() || '',
+                phone: v[1]?.trim() || '',
+                email: v[2]?.trim() || '',
+                company: v[3]?.trim() || '',
+                status: v[4]?.trim() || 'New',
+                tags: v[5]?.trim() || ''
+            }]);
+        }
+        loadLeads();
+        alert('CSV imported!');
+    };
+    
+    reader.readAsText(file);
+};
+
+loadLeads();
+</script>
