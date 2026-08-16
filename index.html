@@ -5,10 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhatsApp CRM</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background-color: #25D366;
+            border-color: #25D366;
+        }
+        .btn-primary:hover {
+            background-color: #128C7E;
+            border-color: #128C7E;
+        }
+        .btn-outline-primary {
+            color: #25D366;
+            border-color: #25D366;
+        }
+        .btn-outline-primary:hover,
+        .btn-outline-primary.active {
+            background-color: #25D366;
+            border-color: #25D366;
+            color: white;
+        }
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
     <!-- Login Screen -->
@@ -20,9 +50,9 @@
                         <h3 class="text-center mb-4">
                             <i class="fab fa-whatsapp text-success"></i> WhatsApp CRM
                         </h3>
-                        <div id="authTabs" class="btn-group w-100 mb-3" role="group">
-                            <button class="btn btn-outline-primary active" onclick="showAuth('login')">Login</button>
-                            <button class="btn btn-outline-primary" onclick="showAuth('signup')">Sign Up</button>
+                        <div class="btn-group w-100 mb-3" role="group">
+                            <button id="loginTab" class="btn btn-outline-primary active" onclick="showAuth('login')">Login</button>
+                            <button id="signupTab" class="btn btn-outline-primary" onclick="showAuth('signup')">Sign Up</button>
                         </div>
                         <div id="loginForm">
                             <div class="mb-3">
@@ -42,7 +72,7 @@
                             </div>
                             <button onclick="signup()" class="btn btn-primary w-100">Sign Up</button>
                         </div>
-                        <div id="authMessage" class="text-danger mt-2"></div>
+                        <div id="authMessage" class="mt-2"></div>
                     </div>
                 </div>
             </div>
@@ -60,34 +90,30 @@
                 </div>
             </div>
         </nav>
-
         <div class="container-fluid mt-4">
-            <!-- Dashboard -->
-            <div id="dashboardSection">
-                <h3 class="mb-4">Dashboard</h3>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card text-white bg-primary">
-                            <div class="card-body">
-                                <h5>Total Leads</h5>
-                                <h2 id="totalLeads">0</h2>
-                            </div>
+            <h3 class="mb-4">Dashboard</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body">
+                            <h5>Total Leads</h5>
+                            <h2 id="totalLeads">0</h2>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-success">
-                            <div class="card-body">
-                                <h5>Active Leads</h5>
-                                <h2 id="activeLeads">0</h2>
-                            </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-white bg-success">
+                        <div class="card-body">
+                            <h5>Active Leads</h5>
+                            <h2 id="activeLeads">0</h2>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-warning">
-                            <div class="card-body">
-                                <h5>Converted</h5>
-                                <h2 id="convertedLeads">0</h2>
-                            </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-white bg-warning">
+                        <div class="card-body">
+                            <h5>Converted</h5>
+                            <h2 id="convertedLeads">0</h2>
                         </div>
                     </div>
                 </div>
@@ -95,7 +121,109 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+        
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_PUBLISHABLE_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+        window.supabase = supabase;
+
+        // Auth State Change
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session?.user) {
+                showDashboard(session.user);
+            } else {
+                showLogin();
+            }
+        });
+
+        window.showAuth = function(type) {
+            if (type === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('signupForm').style.display = 'none';
+                document.getElementById('loginTab').classList.add('active');
+                document.getElementById('signupTab').classList.remove('active');
+            } else {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'block';
+                document.getElementById('signupTab').classList.add('active');
+                document.getElementById('loginTab').classList.remove('active');
+            }
+        };
+
+        window.showLogin = function() {
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('mainApp').style.display = 'none';
+        };
+
+        window.showDashboard = function(user) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('userDisplay').textContent = `Welcome, ${user.email}`;
+            loadDashboard();
+        };
+
+        window.signup = async function() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            
+            const msg = document.getElementById('authMessage');
+            if (error) {
+                msg.textContent = error.message;
+                msg.className = 'mt-2 text-danger';
+            } else {
+                msg.textContent = 'Sign up successful! Check your email if confirmation is required.';
+                msg.className = 'mt-2 text-success';
+            }
+        };
+
+        window.login = async function() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            
+            const msg = document.getElementById('authMessage');
+            if (error) {
+                msg.textContent = error.message;
+                msg.className = 'mt-2 text-danger';
+            }
+            // onAuthStateChange handles dashboard display
+        };
+
+        window.logout = async function() {
+            await supabase.auth.signOut();
+        };
+
+        async function loadDashboard() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            
+            const { data: leads } = await supabase
+                .from('leads')
+                .select('*')
+                .eq('user_id', user.id);
+            
+            if (leads) {
+                document.getElementById('totalLeads').textContent = leads.length;
+                const activeLeads = leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost');
+                document.getElementById('activeLeads').textContent = activeLeads.length;
+                const convertedLeads = leads.filter(l => l.status === 'Converted');
+                document.getElementById('convertedLeads').textContent = convertedLeads.length;
+            }
+        }
+
+        // Check session on load
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            showDashboard(session.user);
+        } else {
+            showLogin();
+        }
+    </script>
 </body>
 </html>
