@@ -1,0 +1,333 @@
+<style>
+    .bulk-lead-item {
+        padding: 10px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .bulk-lead-item:hover {
+        background-color: #f8f9fa;
+    }
+    .progress {
+        height: 25px;
+    }
+    .queue-item {
+        padding: 8px;
+        border-radius: 5px;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+    .queue-pending {
+        background-color: #fff3e0;
+        border-left: 3px solid #f57c00;
+    }
+    .queue-sent {
+        background-color: #e8f5e9;
+        border-left: 3px solid #388e3c;
+    }
+    .queue-skipped {
+        background-color: #ffebee;
+        border-left: 3px solid #d32f2f;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-bulk"></i> Bulk WhatsApp Sending</h3>
+</div>
+
+<div class="row">
+    <!-- Lead Selection -->
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Select Leads</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <input type="text" id="bulkLeadSearch" class="form-control me-2" placeholder="Search leads..." onkeyup="filterBulkLeads()">
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-outline-primary me-2" onclick="selectAllLeads()">Select All</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="deselectAllLeads()">Deselect All</button>
+                </div>
+                <div id="bulkLeadsSelector" style="max-height: 400px; overflow-y: auto;"></div>
+                <div class="mt-3">
+                    <strong>Selected: <span id="selectedCount">0</span> leads</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Composer -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Compose Bulk Message</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Template</label>
+                    <select id="bulkTemplateSelect" class="form-select" onchange="applyBulkTemplate()">
+                        <option value="">-- Choose Template --</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Message</label>
+                    <textarea id="bulkMessageContent" class="form-control" rows="5" placeholder="Type your message here..."></textarea>
+                    <small class="text-muted">Variables: {name}, {company}, {email}, {phone}</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Delay Between Messages (seconds)</label>
+                    <input type="number" id="delaySeconds" class="form-control" value="3" min="1" max="30">
+                    <small class="text-muted">Longer delay reduces risk of WhatsApp blocking</small>
+                </div>
+                
+                <button class="btn btn-success w-100" onclick="startBulkSend()" id="startBulkBtn">
+                    <i class="fab fa-whatsapp"></i> Start Bulk Send
+                </button>
+                
+                <button class="btn btn-danger w-100 mt-2" onclick="stopBulkSend()" id="stopBulkBtn" style="display:none;">
+                    <i class="fas fa-stop"></i> Stop Sending
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Section -->
+<div class="row mt-4" id="progressSection" style="display:none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Sending Progress</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" id="progressBar" style="width: 0%"></div>
+                </div>
+                <p class="text-center">
+                    <span id="sentCount">0</span> / <span id="totalCount">0</span> sent
+                </p>
+                <div id="queueList" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let bulkLeads = [];
+let selectedLeads = new Set();
+let isSending = false;
+let sendQueue = [];
+
+async function loadBulkLeads() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+    
+    bulkLeads = leads || [];
+    displayBulkLeads(bulkLeads);
+}
+
+function displayBulkLeads(leads) {
+    if (leads.length === 0) {
+        document.getElementById('bulkLeadsSelector').innerHTML = '<p class="text-muted text-center mt-3">No leads found</p>';
+        return;
+    }
+    
+    document.getElementById('bulkLeadsSelector').innerHTML = leads.map(lead => `
+        <div class="bulk-lead-item d-flex justify-content-between align-items-center" id="bulkLeadItem${lead.id}">
+            <div>
+                <input type="checkbox" class="form-check-input me-2" id="check${lead.id}" onchange="toggleLead(${lead.id})" ${selectedLeads.has(lead.id) ? 'checked' : ''}>
+                <strong>${lead.name}</strong>
+                <br><small class="text-muted">${lead.phone}</small>
+            </div>
+            ${lead.company ? `<span class="badge bg-secondary">${lead.company}</span>` : ''}
+        </div>
+    `).join('');
+}
+
+window.filterBulkLeads = function() {
+    const search = document.getElementById('bulkLeadSearch').value.toLowerCase();
+    const filtered = bulkLeads.filter(lead => 
+        lead.name.toLowerCase().includes(search) || 
+        lead.phone.includes(search) ||
+        (lead.company && lead.company.toLowerCase().includes(search))
+    );
+    displayBulkLeads(filtered);
+};
+
+window.toggleLead = function(id) {
+    if (selectedLeads.has(id)) {
+        selectedLeads.delete(id);
+    } else {
+        selectedLeads.add(id);
+    }
+    document.getElementById('selectedCount').textContent = selectedLeads.size;
+};
+
+window.selectAllLeads = function() {
+    bulkLeads.forEach(lead => selectedLeads.add(lead.id));
+    displayBulkLeads(bulkLeads);
+    document.getElementById('selectedCount').textContent = selectedLeads.size;
+};
+
+window.deselectAllLeads = function() {
+    selectedLeads.clear();
+    displayBulkLeads(bulkLeads);
+    document.getElementById('selectedCount').textContent = 0;
+};
+
+async function loadBulkTemplates() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: templates } = await window.supabase
+        .from('templates')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    const select = document.getElementById('bulkTemplateSelect');
+    
+    if (templates && templates.length > 0) {
+        templates.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.content;
+            option.textContent = t.name;
+            select.appendChild(option);
+        });
+    }
+}
+
+window.applyBulkTemplate = function() {
+    const content = document.getElementById('bulkTemplateSelect').value;
+    if (content) {
+        document.getElementById('bulkMessageContent').value = content;
+    }
+};
+
+window.startBulkSend = function() {
+    const message = document.getElementById('bulkMessageContent').value;
+    
+    if (!message) {
+        alert('Please enter a message');
+        return;
+    }
+    
+    if (selectedLeads.size === 0) {
+        alert('Please select at least one lead');
+        return;
+    }
+    
+    // Build queue
+    sendQueue = bulkLeads.filter(lead => selectedLeads.has(lead.id));
+    
+    if (sendQueue.length === 0) {
+        alert('Selected leads not found');
+        return;
+    }
+    
+    isSending = true;
+    document.getElementById('startBulkBtn').style.display = 'none';
+    document.getElementById('stopBulkBtn').style.display = 'block';
+    document.getElementById('progressSection').style.display = 'block';
+    
+    document.getElementById('totalCount').textContent = sendQueue.length;
+    document.getElementById('sentCount').textContent = 0;
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('queueList').innerHTML = '';
+    
+    processQueue(message);
+};
+
+window.stopBulkSend = function() {
+    isSending = false;
+    document.getElementById('startBulkBtn').style.display = 'block';
+    document.getElementById('stopBulkBtn').style.display = 'none';
+};
+
+async function processQueue(message) {
+    const delay = parseInt(document.getElementById('delaySeconds').value) * 1000;
+    let sent = 0;
+    
+    for (let i = 0; i < sendQueue.length; i++) {
+        if (!isSending) break;
+        
+        const lead = sendQueue[i];
+        
+        // Personalize message
+        let personalized = message
+            .replace(/{name}/g, lead.name)
+            .replace(/{company}/g, lead.company || '')
+            .replace(/{email}/g, lead.email || '')
+            .replace(/{phone}/g, lead.phone);
+        
+        // Open WhatsApp
+        const cleanPhone = lead.phone.replace(/[^0-9]/g, '');
+        const encodedMessage = encodeURIComponent(personalized);
+        const waLink = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+        window.open(waLink, '_blank');
+        
+        // Update queue UI
+        const queueHtml = sendQueue.map((q, index) => {
+            let status = 'pending';
+            let statusClass = 'queue-pending';
+            let statusText = 'Pending';
+            
+            if (index < i) {
+                status = 'sent';
+                statusClass = 'queue-sent';
+                statusText = 'Sent';
+            } else if (index === i) {
+                status = 'sending';
+                statusClass = 'queue-pending';
+                statusText = 'Sending...';
+            }
+            
+            return `<div class="queue-item ${statusClass}">
+                <strong>${q.name}</strong> - ${q.phone} 
+                <span class="float-end">${statusText}</span>
+            </div>`;
+        }).join('');
+        
+        document.getElementById('queueList').innerHTML = queueHtml;
+        
+        sent = i + 1;
+        document.getElementById('sentCount').textContent = sent;
+        document.getElementById('progressBar').style.width = ((sent / sendQueue.length) * 100) + '%';
+        
+        // Log activity
+        await logBulkActivity('Bulk WhatsApp Sent', `Sent to: ${lead.name}`);
+        
+        // Wait before next
+        if (i < sendQueue.length - 1 && isSending) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    
+    if (isSending) {
+        document.getElementById('startBulkBtn').style.display = 'block';
+        document.getElementById('stopBulkBtn').style.display = 'none';
+        alert('Bulk sending completed! ' + sent + ' messages sent.');
+    }
+}
+
+async function logBulkActivity(action, details) {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    await window.supabase.from('activity_log').insert([{
+        user_id: user.id,
+        action: action,
+        details: details
+    }]);
+}
+
+loadBulkLeads();
+loadBulkTemplates();
+</script>
