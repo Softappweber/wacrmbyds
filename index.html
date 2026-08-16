@@ -368,6 +368,32 @@
             await supabase.auth.signOut();
         };
 
+        window.loadFeature = async function(page, navLink) {
+    if (navLink) {
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        navLink.classList.add('active');
+    }
+    
+    try {
+        const response = await fetch(page);
+        const html = await response.text();
+        document.getElementById('content').innerHTML = html;
+        
+        const scripts = document.getElementById('content').querySelectorAll('script');
+        scripts.forEach(script => {
+            const newScript = document.createElement('script');
+            if (script.src) {
+                newScript.src = script.src;
+            } else {
+                newScript.textContent = script.textContent;
+            }
+            document.body.appendChild(newScript);
+        });
+    } catch (error) {
+        document.getElementById('content').innerHTML = '<p>Failed to load feature.</p>';
+    }
+};
+
         // Dashboard
         async function loadDashboard() {
             const { data: { user } } = await supabase.auth.getUser();
