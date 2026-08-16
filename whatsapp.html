@@ -1,0 +1,255 @@
+<style>
+    .lead-selector {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 10px;
+    }
+    .lead-item {
+        padding: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    .lead-item:hover {
+        background-color: #f8f9fa;
+    }
+    .lead-item.selected {
+        background-color: #e8f5e9;
+        border-left: 3px solid #25D366;
+    }
+    .message-preview {
+        background-color: #e8f5e9;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        font-size: 14px;
+    }
+    .whatsapp-green {
+        background-color: #25D366;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    .whatsapp-green:hover {
+        background-color: #128C7E;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fab fa-whatsapp text-success"></i> Send WhatsApp Message</h3>
+</div>
+
+<div class="row">
+    <!-- Lead Selection -->
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Select Lead</h5>
+            </div>
+            <div class="card-body">
+                <input type="text" id="leadSearch" class="form-control mb-3" placeholder="Search leads..." onkeyup="filterLeads()">
+                <div class="lead-selector" id="leadsSelector"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Composer -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Compose Message</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Template</label>
+                    <select id="templateSelect" class="form-select" onchange="applyTemplate()">
+                        <option value="">-- Choose Template --</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Message</label>
+                    <textarea id="messageContent" class="form-control" rows="6" placeholder="Type your message here..."></textarea>
+                    <small class="text-muted">Variables: {name}, {company}, {email}, {phone}</small>
+                </div>
+                
+                <div id="selectedLeadInfo" class="alert alert-info" style="display:none;"></div>
+                
+                <div class="message-preview" id="messagePreview" style="display:none;">
+                    <strong>Preview:</strong>
+                    <div id="previewText"></div>
+                </div>
+                
+                <button class="whatsapp-green w-100 mt-3" onclick="sendWhatsApp()">
+                    <i class="fab fa-whatsapp"></i> Send via WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allLeads = [];
+let selectedLeadId = null;
+
+async function loadLeadsForWhatsApp() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+    
+    allLeads = leads || [];
+    displayLeads(allLeads);
+}
+
+function displayLeads(leads) {
+    if (leads.length === 0) {
+        document.getElementById('leadsSelector').innerHTML = '<p class="text-muted text-center mt-3">No leads found</p>';
+        return;
+    }
+    
+    document.getElementById('leadsSelector').innerHTML = leads.map(lead => `
+        <div class="lead-item" id="leadItem${lead.id}" onclick="selectLead(${lead.id})">
+            <div class="d-flex justify-content-between">
+                <strong>${lead.name}</strong>
+                <span class="text-muted">${lead.phone}</span>
+            </div>
+            ${lead.company ? `<small class="text-muted">${lead.company}</small>` : ''}
+        </div>
+    `).join('');
+}
+
+window.filterLeads = function() {
+    const search = document.getElementById('leadSearch').value.toLowerCase();
+    const filtered = allLeads.filter(lead => 
+        lead.name.toLowerCase().includes(search) || 
+        lead.phone.includes(search) ||
+        (lead.company && lead.company.toLowerCase().includes(search))
+    );
+    displayLeads(filtered);
+};
+
+window.selectLead = function(id) {
+    selectedLeadId = id;
+    
+    document.querySelectorAll('.lead-item').forEach(item => item.classList.remove('selected'));
+    document.getElementById('leadItem' + id).classList.add('selected');
+    
+    const lead = allLeads.find(l => l.id === id);
+    if (lead) {
+        document.getElementById('selectedLeadInfo').style.display = 'block';
+        document.getElementById('selectedLeadInfo').innerHTML = `
+            <strong>Selected Lead:</strong> ${lead.name} | ${lead.phone} | ${lead.company || 'No company'}
+        `;
+        updatePreview();
+    }
+};
+
+async function loadTemplatesForWhatsApp() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: templates } = await window.supabase
+        .from('templates')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    const select = document.getElementById('templateSelect');
+    
+    if (templates && templates.length > 0) {
+        templates.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.content;
+            option.textContent = t.name;
+            select.appendChild(option);
+        });
+    }
+}
+
+window.applyTemplate = function() {
+    const templateContent = document.getElementById('templateSelect').value;
+    if (templateContent) {
+        document.getElementById('messageContent').value = templateContent;
+        updatePreview();
+    }
+};
+
+window.updatePreview = function() {
+    const message = document.getElementById('messageContent').value;
+    const previewDiv = document.getElementById('messagePreview');
+    const previewText = document.getElementById('previewText');
+    
+    if (selectedLeadId && message) {
+        const lead = allLeads.find(l => l.id === selectedLeadId);
+        
+        let personalized = message
+            .replace(/{name}/g, lead.name)
+            .replace(/{company}/g, lead.company || '')
+            .replace(/{email}/g, lead.email || '')
+            .replace(/{phone}/g, lead.phone);
+        
+        previewDiv.style.display = 'block';
+        previewText.textContent = personalized;
+    } else {
+        previewDiv.style.display = 'none';
+    }
+};
+
+window.sendWhatsApp = function() {
+    if (!selectedLeadId) {
+        alert('Please select a lead first');
+        return;
+    }
+    
+    const lead = allLeads.find(l => l.id === selectedLeadId);
+    const message = document.getElementById('messageContent').value;
+    
+    if (!message) {
+        alert('Please enter a message');
+        return;
+    }
+    
+    let personalized = message
+        .replace(/{name}/g, lead.name)
+        .replace(/{company}/g, lead.company || '')
+        .replace(/{email}/g, lead.email || '')
+        .replace(/{phone}/g, lead.phone);
+    
+    const cleanPhone = lead.phone.replace(/[^0-9]/g, '');
+    const encodedMessage = encodeURIComponent(personalized);
+    const waLink = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    
+    window.open(waLink, '_blank');
+    
+    // Log activity
+    logActivity('WhatsApp Message Sent', `Sent to: ${lead.name}`);
+};
+
+async function logActivity(action, details) {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    await window.supabase.from('activity_log').insert([{
+        user_id: user.id,
+        action: action,
+        details: details
+    }]);
+}
+
+document.getElementById('messageContent').addEventListener('input', updatePreview);
+
+loadLeadsForWhatsApp();
+loadTemplatesForWhatsApp();
+</script>
