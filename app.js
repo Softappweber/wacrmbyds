@@ -1,10 +1,33 @@
 // Supabase Configuration
-const SUPABASE_URL = 'https://xeqxttprjzmhfcdnyhlm.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_QNRcYI3KaHNUr2hKF_d28Q_3TKjT5cf';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_PUBLISHABLE_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Auth Functions
+// Auth State Change Listener - This is the critical part
+supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+        showDashboard(session.user);
+    } else {
+        showLogin();
+    }
+});
+
+// Show Login
+function showLogin() {
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('mainApp').style.display = 'none';
+}
+
+// Show Dashboard
+function showDashboard(user) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('userDisplay').textContent = `Welcome, ${user.email}`;
+    loadDashboard();
+}
+
+// Auth Tab Switching
 function showAuth(type) {
     if (type === 'login') {
         document.getElementById('loginForm').style.display = 'block';
@@ -15,6 +38,7 @@ function showAuth(type) {
     }
 }
 
+// Sign Up
 async function signup() {
     const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
@@ -26,12 +50,14 @@ async function signup() {
     
     if (error) {
         document.getElementById('authMessage').textContent = error.message;
+        document.getElementById('authMessage').className = 'text-danger mt-2';
     } else {
-        document.getElementById('authMessage').textContent = 'Sign up successful! Please check your email to confirm.';
+        document.getElementById('authMessage').textContent = 'Sign up successful! Check your email if confirmation is required.';
         document.getElementById('authMessage').className = 'text-success mt-2';
     }
 }
 
+// Login
 async function login() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -43,24 +69,26 @@ async function login() {
     
     if (error) {
         document.getElementById('authMessage').textContent = error.message;
-    } else {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('userDisplay').textContent = `Welcome, ${data.user.email}`;
-        loadDashboard();
+        document.getElementById('authMessage').className = 'text-danger mt-2';
     }
+    // No else needed - onAuthStateChange handles dashboard display
 }
 
+// Logout
 async function logout() {
     await supabase.auth.signOut();
-    location.reload();
+    // onAuthStateChange handles UI switch
 }
 
-// Dashboard Functions
+// Dashboard Data
 async function loadDashboard() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
     const { data: leads, error } = await supabase
         .from('leads')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
     
     if (leads) {
         document.getElementById('totalLeads').textContent = leads.length;
@@ -73,13 +101,12 @@ async function loadDashboard() {
     }
 }
 
-// Check auth on load
+// Initial Check on Page Load
 window.onload = async function() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('userDisplay').textContent = `Welcome, ${user.email}`;
-        loadDashboard();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+        showDashboard(session.user);
+    } else {
+        showLogin();
     }
 };
