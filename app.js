@@ -2,7 +2,7 @@
 const SUPABASE_URL = 'https://xeqxttprjzmhfcdnyhlm.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_QNRcYI3KaHNUr2hKF_d28Q_3TKjT5cf';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabase = window.supabase.createClient(https://xeqxttprjzmhfcdnyhlm.supabase.co, sb_publishable_QNRcYI3KaHNUr2hKF_d28Q_3TKjT5cf);
 
 // Auth State Change Listener - This is the critical part
 supabase.auth.onAuthStateChange((event, session) => {
