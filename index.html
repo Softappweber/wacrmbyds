@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4">
+                            <i class="fab fa-whatsapp text-success"></i> WhatsApp CRM
+                        </h3>
+                        <div id="authTabs" class="btn-group w-100 mb-3" role="group">
+                            <button class="btn btn-outline-primary active" onclick="showAuth('login')">Login</button>
+                            <button class="btn btn-outline-primary" onclick="showAuth('signup')">Sign Up</button>
+                        </div>
+                        <div id="loginForm">
+                            <div class="mb-3">
+                                <input type="email" id="loginEmail" class="form-control" placeholder="Email">
+                            </div>
+                            <div class="mb-3">
+                                <input type="password" id="loginPassword" class="form-control" placeholder="Password">
+                            </div>
+                            <button onclick="login()" class="btn btn-primary w-100">Login</button>
+                        </div>
+                        <div id="signupForm" style="display:none;">
+                            <div class="mb-3">
+                                <input type="email" id="signupEmail" class="form-control" placeholder="Email">
+                            </div>
+                            <div class="mb-3">
+                                <input type="password" id="signupPassword" class="form-control" placeholder="Password (min 6 characters)">
+                            </div>
+                            <button onclick="signup()" class="btn btn-primary w-100">Sign Up</button>
+                        </div>
+                        <div id="authMessage" class="text-danger mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" style="display:none;">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#"><i class="fab fa-whatsapp"></i> WhatsApp CRM</a>
+                <div class="ms-auto">
+                    <span class="navbar-text me-3 text-white" id="userDisplay"></span>
+                    <button class="btn btn-light btn-sm" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container-fluid mt-4">
+            <!-- Dashboard -->
+            <div id="dashboardSection">
+                <h3 class="mb-4">Dashboard</h3>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card text-white bg-primary">
+                            <div class="card-body">
+                                <h5>Total Leads</h5>
+                                <h2 id="totalLeads">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-white bg-success">
+                            <div class="card-body">
+                                <h5>Active Leads</h5>
+                                <h2 id="activeLeads">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-white bg-warning">
+                            <div class="card-body">
+                                <h5>Converted</h5>
+                                <h2 id="convertedLeads">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>
