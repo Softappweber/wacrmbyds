@@ -1,11 +1,14 @@
-// Supabase Configuration
+// Use the global supabase from CDN - DO NOT redeclare it
+// const supabase = window.supabase.createClient(...) ← REMOVE THIS
+
 const SUPABASE_URL = 'https://xeqxttprjzmhfcdnyhlm.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_QNRcYI3KaHNUr2hKF_d28Q_3TKjT5cf';
 
-const supabase = window.supabase.createClient(https://xeqxttprjzmhfcdnyhlm.supabase.co, sb_publishable_QNRcYI3KaHNUr2hKF_d28Q_3TKjT5cf);
+// Create client without const supabase (assign to window)
+window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Auth State Change Listener - This is the critical part
-supabase.auth.onAuthStateChange((event, session) => {
+// Auth State Change Listener
+window.supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
         showDashboard(session.user);
     } else {
@@ -13,13 +16,11 @@ supabase.auth.onAuthStateChange((event, session) => {
     }
 });
 
-// Show Login
 function showLogin() {
     document.getElementById('loginScreen').style.display = 'block';
     document.getElementById('mainApp').style.display = 'none';
 }
 
-// Show Dashboard
 function showDashboard(user) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
@@ -27,7 +28,6 @@ function showDashboard(user) {
     loadDashboard();
 }
 
-// Auth Tab Switching
 function showAuth(type) {
     if (type === 'login') {
         document.getElementById('loginForm').style.display = 'block';
@@ -38,12 +38,11 @@ function showAuth(type) {
     }
 }
 
-// Sign Up
 async function signup() {
     const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
     
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await window.supabaseClient.auth.signUp({
         email: email,
         password: password
     });
@@ -57,12 +56,11 @@ async function signup() {
     }
 }
 
-// Login
 async function login() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await window.supabaseClient.auth.signInWithPassword({
         email: email,
         password: password
     });
@@ -71,21 +69,17 @@ async function login() {
         document.getElementById('authMessage').textContent = error.message;
         document.getElementById('authMessage').className = 'text-danger mt-2';
     }
-    // No else needed - onAuthStateChange handles dashboard display
 }
 
-// Logout
 async function logout() {
-    await supabase.auth.signOut();
-    // onAuthStateChange handles UI switch
+    await window.supabaseClient.auth.signOut();
 }
 
-// Dashboard Data
 async function loadDashboard() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) return;
     
-    const { data: leads, error } = await supabase
+    const { data: leads, error } = await window.supabaseClient
         .from('leads')
         .select('*')
         .eq('user_id', user.id);
@@ -101,9 +95,8 @@ async function loadDashboard() {
     }
 }
 
-// Initial Check on Page Load
 window.onload = async function() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
     if (session?.user) {
         showDashboard(session.user);
     } else {
