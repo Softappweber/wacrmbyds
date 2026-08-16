@@ -7,19 +7,27 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// CORS - Allow all for now
 app.use(cors({
-  origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'https://yourusername.github.io'],
+  origin: true,
   credentials: true
 }));
+
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'whatsapp-crm-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 }
+  cookie: { 
+    secure: false, // Set to false for HTTP
+    maxAge: 24 * 60 * 60 * 1000 
+  }
 }));
+
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'WhatsApp CRM API is running' });
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
