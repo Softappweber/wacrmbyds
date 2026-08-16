@@ -1,105 +1,583 @@
-// Use the global supabase from CDN - DO NOT redeclare it
-// const supabase = window.supabase.createClient(...) ← REMOVE THIS
+// =====================================================
+// Jimmy Mailer v1
+// Supabase Authentication
+// =====================================================
 
 const SUPABASE_URL = 'https://xeqxttprjzmhfcdnyhlm.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_QNRcYI3KaHNUr2hKF_d28Q_3TKjT5cf';
 
-// Create client without const supabase (assign to window)
-window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+);
 
-// Auth State Change Listener
-window.supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (session?.user) {
-        showDashboard(session.user);
-    } else {
-        showLogin();
+
+// =====================================================
+// DOM
+// =====================================================
+
+const loginScreen = document.getElementById('loginScreen');
+const app = document.getElementById('app');
+
+const loginBox = document.getElementById('loginBox');
+const signupBox = document.getElementById('signupBox');
+
+const loginForm = document.getElementById('loginForm');
+const signupForm = document.getElementById('signupForm');
+
+const showSignupButton = document.getElementById('showSignup');
+const showLoginButton = document.getElementById('showLogin');
+
+const logoutButton = document.getElementById('logoutButton');
+
+const userEmail = document.getElementById('userEmail');
+
+const loadingOverlay = document.getElementById('loadingOverlay');
+
+
+// =====================================================
+// Loading
+// =====================================================
+
+function showLoading(show) {
+
+    loadingOverlay.classList.toggle('hidden', !show);
+
+}
+
+
+// =====================================================
+// Toast
+// =====================================================
+
+function showToast(message) {
+
+    const container =
+        document.getElementById('toastContainer');
+
+    const toast =
+        document.createElement('div');
+
+    toast.className = 'toast';
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3500);
+
+}
+
+
+// =====================================================
+// Show Login Screen
+// =====================================================
+
+function showLoginScreen() {
+
+    loginScreen.classList.remove('hidden');
+    app.classList.add('hidden');
+
+}
+
+
+// =====================================================
+// Show Dashboard
+// =====================================================
+
+function showApp(user) {
+
+    loginScreen.classList.add('hidden');
+    app.classList.remove('hidden');
+
+    userEmail.textContent =
+        user?.email || '';
+
+}
+
+
+// =====================================================
+// Sign Up
+// =====================================================
+
+async function signup(name, email, password) {
+
+    showLoading(true);
+
+    try {
+
+        const { data, error } =
+            await supabaseClient.auth.signUp({
+
+                email: email,
+                password: password,
+
+                options: {
+                    data: {
+                        name: name
+                    },
+                    emailRedirectTo:
+                'https://softappweber.github.io/jimmy-mailer/'
+                }
+
+            });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        // Email confirmation required
+        if (!data.session) {
+
+            showToast(
+                'Account created. Please check your email to confirm your account.'
+            );
+
+            signupBox.classList.add('hidden');
+            loginBox.classList.remove('hidden');
+
+            return;
+        }
+
+
+        // Email confirmation not required
+        showApp(data.user);
+
+        showToast(
+            'Account created successfully!'
+        );
+
+
+    } catch (error) {
+
+        console.error('Signup error:', error);
+
+        showToast(
+            error.message || 'Signup failed.'
+        );
+
+    } finally {
+
+        showLoading(false);
+
     }
-});
 
-function showLogin() {
-    document.getElementById('loginScreen').style.display = 'block';
-    document.getElementById('mainApp').style.display = 'none';
 }
 
-function showDashboard(user) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    document.getElementById('userDisplay').textContent = `Welcome, ${user.email}`;
-    loadDashboard();
-}
 
-function showAuth(type) {
-    if (type === 'login') {
-        document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('signupForm').style.display = 'none';
-    } else {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('signupForm').style.display = 'block';
+// =====================================================
+// Sign In
+// =====================================================
+
+async function login(email, password) {
+
+    showLoading(true);
+
+    try {
+
+        const { data, error } =
+            await supabaseClient.auth.signInWithPassword({
+
+                email: email,
+                password: password
+
+            });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (!data.session || !data.user) {
+            throw new Error(
+                'Login succeeded but no session was returned.'
+            );
+        }
+
+
+        showApp(data.user);
+
+        showToast(
+            'Welcome to Jimmy Mailer!'
+        );
+
+
+    } catch (error) {
+
+        console.error('Login error:', error);
+
+        showToast(
+            error.message || 'Login failed.'
+        );
+
+    } finally {
+
+        showLoading(false);
+
     }
+
 }
 
-async function signup() {
-    const email = document.getElementById('signupEmail').value;
-    const password = document.getElementById('signupPassword').value;
-    
-    const { data, error } = await window.supabaseClient.auth.signUp({
-        email: email,
-        password: password
-    });
-    
-    if (error) {
-        document.getElementById('authMessage').textContent = error.message;
-        document.getElementById('authMessage').className = 'text-danger mt-2';
-    } else {
-        document.getElementById('authMessage').textContent = 'Sign up successful! Check your email if confirmation is required.';
-        document.getElementById('authMessage').className = 'text-success mt-2';
-    }
-}
 
-async function login() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    
-    const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password
-    });
-    
-    if (error) {
-        document.getElementById('authMessage').textContent = error.message;
-        document.getElementById('authMessage').className = 'text-danger mt-2';
-    }
-}
+// =====================================================
+// Logout
+// =====================================================
 
 async function logout() {
-    await window.supabaseClient.auth.signOut();
+
+    showLoading(true);
+
+    try {
+
+        const { error } =
+            await supabaseClient.auth.signOut();
+
+        if (error) {
+            throw error;
+        }
+
+        showLoginScreen();
+
+        loginForm.reset();
+        signupForm.reset();
+
+        signupBox.classList.add('hidden');
+        loginBox.classList.remove('hidden');
+
+        showToast('Logged out.');
+
+    } catch (error) {
+
+        console.error('Logout error:', error);
+
+        showToast(
+            error.message || 'Logout failed.'
+        );
+
+    } finally {
+
+        showLoading(false);
+
+    }
+
 }
 
-async function loadDashboard() {
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) return;
-    
-    const { data: leads, error } = await window.supabaseClient
-        .from('leads')
-        .select('*')
-        .eq('user_id', user.id);
-    
-    if (leads) {
-        document.getElementById('totalLeads').textContent = leads.length;
-        
-        const activeLeads = leads.filter(lead => lead.status !== 'Converted' && lead.status !== 'Lost');
-        document.getElementById('activeLeads').textContent = activeLeads.length;
-        
-        const convertedLeads = leads.filter(lead => lead.status === 'Converted');
-        document.getElementById('convertedLeads').textContent = convertedLeads.length;
+
+// =====================================================
+// Check Existing Session
+// =====================================================
+
+async function checkAuth() {
+
+    showLoading(true);
+
+    try {
+
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+
+        if (session?.user) {
+
+            showApp(session.user);
+
+        } else {
+
+            showLoginScreen();
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            'Session check error:',
+            error
+        );
+
+        showLoginScreen();
+
+    } finally {
+
+        showLoading(false);
+
     }
+
 }
 
-window.onload = async function() {
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (session?.user) {
-        showDashboard(session.user);
-    } else {
-        showLogin();
+
+// =====================================================
+// Auth State Listener
+// =====================================================
+
+supabaseClient.auth.onAuthStateChange(
+    (event, session) => {
+
+        console.log(
+            'Auth event:',
+            event
+        );
+
+        if (session?.user) {
+
+            showApp(session.user);
+
+        } else {
+
+            showLoginScreen();
+
+        }
+
     }
+);
+
+
+// =====================================================
+// UI Events
+// =====================================================
+
+showSignupButton.addEventListener(
+    'click',
+    () => {
+
+        loginBox.classList.add('hidden');
+        signupBox.classList.remove('hidden');
+
+    }
+);
+
+
+showLoginButton.addEventListener(
+    'click',
+    () => {
+
+        signupBox.classList.add('hidden');
+        loginBox.classList.remove('hidden');
+
+    }
+);
+
+
+// =====================================================
+// Login Form
+// =====================================================
+
+loginForm.addEventListener(
+    'submit',
+    async (event) => {
+
+        event.preventDefault();
+
+        const email =
+            document.getElementById('loginEmail')
+                .value
+                .trim();
+
+        const password =
+            document.getElementById('loginPassword')
+                .value;
+
+        await login(
+            email,
+            password
+        );
+
+    }
+);
+
+
+// =====================================================
+// Signup Form
+// =====================================================
+
+signupForm.addEventListener(
+    'submit',
+    async (event) => {
+
+        event.preventDefault();
+
+        const name =
+            document.getElementById('signupName')
+                .value
+                .trim();
+
+        const email =
+            document.getElementById('signupEmail')
+                .value
+                .trim();
+
+        const password =
+            document.getElementById('signupPassword')
+                .value;
+
+        await signup(
+            name,
+            email,
+            password
+        );
+
+    }
+);
+
+
+// =====================================================
+// Logout
+// =====================================================
+
+logoutButton.addEventListener(
+    'click',
+    logout
+);
+
+
+console.log("JIMMY MAILER APP.JS VERSION: 2026-08-16-01");
+
+// =====================================================
+// Dashboard Navigation
+// =====================================================
+
+const navItems =
+    document.querySelectorAll('.nav-item');
+
+const dashboardPage =
+    document.getElementById('dashboardPage');
+
+const contactsPage =
+    document.getElementById('contactsPage');
+
+const placeholderPage =
+    document.getElementById('placeholderPage');
+
+const pageTitle =
+    document.getElementById('pageTitle');
+
+const pageSubtitle =
+    document.getElementById('pageSubtitle');
+
+const placeholderTitle =
+    document.getElementById('placeholderTitle');
+
+const placeholderText =
+    document.getElementById('placeholderText');
+
+
+const pageInformation = {
+
+    dashboard: {
+        title: 'Dashboard',
+        subtitle: 'Overview of your Jimmy Mailer account.'
+    },
+
+    campaigns: {
+        title: 'Campaigns',
+        subtitle: 'Create and manage email campaigns.'
+    },
+
+    contacts: {
+        title: 'Contacts',
+        subtitle: 'Manage your mailing contacts.'
+    },
+
+    templates: {
+        title: 'Templates',
+        subtitle: 'Create and manage email templates.'
+    },
+
+    settings: {
+        title: 'Settings',
+        subtitle: 'Manage your Jimmy Mailer account settings.'
+    }
+
 };
+
+
+function showPage(page) {
+
+    const information =
+        pageInformation[page];
+
+    if (!information) {
+        return;
+    }
+
+
+    pageTitle.textContent =
+        information.title;
+
+    pageSubtitle.textContent =
+        information.subtitle;
+
+
+    /*
+     * Hide every page first.
+     */
+
+    dashboardPage.classList.add('hidden');
+
+    placeholderPage.classList.add('hidden');
+
+
+    /*
+     * Show the requested page.
+     */
+
+    if (page === 'contacts') {
+
+    contactsPage.classList.remove('hidden');
+
+    return;
+}
+
+    if (page === 'dashboard') {
+
+        dashboardPage.classList.remove('hidden');
+
+        return;
+    }
+
+
+    placeholderTitle.textContent =
+        information.title;
+
+    placeholderText.textContent =
+        'This section will be implemented in a later step.';
+
+    placeholderPage.classList.remove('hidden');
+
+}
+
+
+navItems.forEach(item => {
+
+    item.addEventListener('click', () => {
+
+        const page =
+            item.dataset.page;
+
+
+        navItems.forEach(nav => {
+
+            nav.classList.remove('active');
+
+        });
+
+
+        item.classList.add('active');
+
+
+        showPage(page);
+
+    });
+
+});
+
+
+// =====================================================
+// Start
+// =====================================================
+
+checkAuth();
