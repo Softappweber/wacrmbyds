@@ -1,7 +1,0 @@
-node_modules/
-backend/node_modules/
-backend/whatsapp-crm.db
-backend/.wwebjs_auth/
-backend/.wwebjs_cache/
-.env
-.DS_Store
