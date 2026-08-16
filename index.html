@@ -183,31 +183,51 @@
 
         // Load Feature HTML
         window.loadFeature = async function(page, navLink) {
-            if (navLink) {
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                navLink.classList.add('active');
+    if (navLink) {
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        navLink.classList.add('active');
+    }
+    
+    try {
+        const response = await fetch(page);
+        const html = await response.text();
+        
+        // Clear content
+        document.getElementById('content').innerHTML = '';
+        
+        // Remove old feature styles and scripts
+        document.querySelectorAll('style[data-feature]').forEach(s => s.remove());
+        document.querySelectorAll('script[data-feature]').forEach(s => s.remove());
+        
+        // Parse HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        // Extract and apply styles
+        tempDiv.querySelectorAll('style').forEach(style => {
+            style.setAttribute('data-feature', 'true');
+            document.head.appendChild(style);
+        });
+        
+        // Extract and apply scripts
+        tempDiv.querySelectorAll('script').forEach(script => {
+            const newScript = document.createElement('script');
+            newScript.setAttribute('data-feature', 'true');
+            if (script.src) {
+                newScript.src = script.src;
+            } else {
+                newScript.textContent = script.textContent;
             }
-            
-            try {
-                const response = await fetch(page);
-                const html = await response.text();
-                document.getElementById('content').innerHTML = html;
-                
-                const scripts = document.getElementById('content').querySelectorAll('script');
-                scripts.forEach(script => {
-                    const newScript = document.createElement('script');
-                    if (script.src) {
-                        newScript.src = script.src;
-                    } else {
-                        newScript.textContent = script.textContent;
-                    }
-                    document.body.appendChild(newScript);
-                });
-            } catch (error) {
-                document.getElementById('content').innerHTML = '<p>Failed to load feature.</p>';
-            }
-        };
-
+            document.body.appendChild(newScript);
+        });
+        
+        // Set remaining HTML as content
+        document.getElementById('content').innerHTML = tempDiv.innerHTML;
+        
+    } catch (error) {
+        document.getElementById('content').innerHTML = '<p>Failed to load feature.</p>';
+    }
+};
         // Check session on load
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
