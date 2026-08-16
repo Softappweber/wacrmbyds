@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -147,19 +147,33 @@ window.loadFeature = async function(page, navLink) {
     try {
         const response = await fetch(page);
         const html = await response.text();
+        
+        // Set HTML content
         document.getElementById('content').innerHTML = html;
         
-        document.querySelectorAll('#content script').forEach(oldScript => {
-            const newScript = document.createElement('script');
-            if (oldScript.src) {
-                newScript.src = oldScript.src;
+        // Execute scripts in order
+        const scripts = document.getElementById('content').querySelectorAll('script');
+        for (const script of scripts) {
+            if (script.src) {
+                // External script - wait for load
+                await new Promise((resolve, reject) => {
+                    const newScript = document.createElement('script');
+                    newScript.src = script.src;
+                    newScript.onload = resolve;
+                    newScript.onerror = reject;
+                    document.body.appendChild(newScript);
+                });
             } else {
-                newScript.textContent = oldScript.textContent;
+                // Inline script - execute immediately
+                const newScript = document.createElement('script');
+                newScript.textContent = script.textContent;
+                document.body.appendChild(newScript);
+                script.remove();
             }
-            document.body.appendChild(newScript);
-        });
+        }
     } catch (error) {
-        document.getElementById('content').innerHTML = '<p class="text-danger">Failed to load feature.</p>';
+        console.error('Failed to load feature:', error);
+        document.getElementById('content').innerHTML = '<p class="text-danger">Failed to load feature: ' + error.message + '</p>';
     }
 };
 
