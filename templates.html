@@ -1,1 +1,152 @@
+<style>
+    .template-card { cursor: pointer; transition: transform 0.2s; height: 100%; }
+    .template-card:hover { transform: translateY(-5px); }
+    .template-content { background: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 100px; overflow-y: auto; font-size: 14px; }
+    .badge-category { background-color: #e3f2fd; color: #1976d2; padding: 4px 10px; border-radius: 15px; font-size: 12px; }
+</style>
 
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-envelope-open-text"></i> Message Templates</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTemplateModal">
+        <i class="fas fa-plus"></i> Add Template
+    </button>
+</div>
+
+<div class="row" id="templatesList"></div>
+
+<!-- Add Template Modal -->
+<div class="modal fade" id="addTemplateModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Add Template</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="text" id="templateName" class="form-control mb-3" placeholder="Template Name *">
+        <input type="text" id="templateCategory" class="form-control mb-3" placeholder="Category (e.g., Sales)">
+        <textarea id="templateContent" class="form-control mb-3" rows="6" placeholder="Hi {name}, welcome to {company}!"></textarea>
+        <small class="text-muted">Variables: {name}, {company}, {email}, {phone}</small>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="addTemplate()">Save</button>
+    </div>
+</div></div></div>
+
+<!-- Edit Template Modal -->
+<div class="modal fade" id="editTemplateModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Edit Template</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" id="editTemplateId">
+        <input type="text" id="editTemplateName" class="form-control mb-3" placeholder="Template Name *">
+        <input type="text" id="editTemplateCategory" class="form-control mb-3" placeholder="Category">
+        <textarea id="editTemplateContent" class="form-control mb-3" rows="6"></textarea>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="updateTemplate()">Update</button>
+    </div>
+</div></div></div>
+
+<script>
+async function loadTemplates() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: templates } = await window.supabase
+        .from('templates')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+    
+    if (templates && templates.length > 0) {
+        document.getElementById('templatesList').innerHTML = templates.map(t => `
+            <div class="col-md-4 mb-4">
+                <div class="card template-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="mb-0">${t.name}</h5>
+                            <span class="badge-category">${t.category || 'General'}</span>
+                        </div>
+                        <div class="template-content mb-3">${t.content}</div>
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-sm btn-success" onclick="copyTemplate('${t.content.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <div>
+                                <button class="btn btn-sm btn-primary" onclick="editTemplate(${t.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${t.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        document.getElementById('templatesList').innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-envelope-open-text fa-3x text-muted mb-3"></i>
+                <h5>No templates yet</h5>
+                <p class="text-muted">Create your first message template</p>
+            </div>
+        `;
+    }
+}
+
+window.addTemplate = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { error } = await window.supabase.from('templates').insert([{
+        user_id: user.id,
+        name: document.getElementById('templateName').value,
+        category: document.getElementById('templateCategory').value,
+        content: document.getElementById('templateContent').value
+    }]);
+    
+    if (error) { alert(error.message); } else {
+        $('#addTemplateModal').modal('hide');
+        loadTemplates();
+    }
+};
+
+window.editTemplate = async function(id) {
+    const { data: template } = await window.supabase.from('templates').select('*').eq('id', id).single();
+    if (template) {
+        document.getElementById('editTemplateId').value = template.id;
+        document.getElementById('editTemplateName').value = template.name;
+        document.getElementById('editTemplateCategory').value = template.category || '';
+        document.getElementById('editTemplateContent').value = template.content;
+        $('#editTemplateModal').modal('show');
+    }
+};
+
+window.updateTemplate = async function() {
+    const id = document.getElementById('editTemplateId').value;
+    const { error } = await window.supabase.from('templates').update({
+        name: document.getElementById('editTemplateName').value,
+        category: document.getElementById('editTemplateCategory').value,
+        content: document.getElementById('editTemplateContent').value
+    }).eq('id', id);
+    
+    if (error) { alert(error.message); } else {
+        $('#editTemplateModal').modal('hide');
+        loadTemplates();
+    }
+};
+
+window.deleteTemplate = async function(id) {
+    if (confirm('Delete this template?')) {
+        await window.supabase.from('templates').delete().eq('id', id);
+        loadTemplates();
+    }
+};
+
+window.copyTemplate = function(content) {
+    navigator.clipboard.writeText(content).then(() => {
+        alert('Template copied to clipboard!');
+    });
+};
+
+loadTemplates();
+</script>
