@@ -27,7 +27,7 @@
         
         /* Sidebar */
         .sidebar {
-            width: 65px;
+            width: 68px;
             background: linear-gradient(180deg, #0f0f1e 0%, #1a1a2e 50%, #16213e 100%);
             color: white;
             position: fixed;
@@ -105,8 +105,8 @@
         .nav-item {
             display: flex;
             align-items: center;
-            padding: 10px 0;
             justify-content: center;
+            padding: 10px 0;
             color: rgba(255,255,255,0.65);
             text-decoration: none;
             cursor: pointer;
@@ -116,9 +116,11 @@
             overflow: hidden;
             margin: 1px 8px;
             border-radius: 5px;
+            width: 49px;
         }
         
         .sidebar:hover .nav-item {
+            width: auto;
             justify-content: flex-start;
             padding: 10px 16px;
         }
@@ -136,27 +138,16 @@
             box-shadow: 0 2px 8px rgba(37, 211, 102, 0.15);
         }
         
-        .nav-item.active::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            width: 3px;
-            height: 60%;
-            background: linear-gradient(180deg, #25D366, #128C7E);
-            border-radius: 3px 0 0 3px;
-            animation: pulseGlow 2s infinite;
-        }
-        
-        @keyframes pulseGlow {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
         .nav-item i {
-            width: 18px;
+            width: 22px;
             font-size: 15px;
             text-align: center;
             flex-shrink: 0;
+            margin: 0;
+        }
+        
+        .sidebar:hover .nav-item i {
+            margin-right: 10px;
         }
         
         .nav-item span {
@@ -259,8 +250,11 @@
         }
         
         /* Main Content */
-       .main-content {
-    margin-left: 68px;
+        .main-content {
+            flex: 1;
+            margin-left: 68px;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
         }
         
         .topbar {
@@ -359,6 +353,7 @@
             .sidebar .nav-item {
                 justify-content: flex-start;
                 padding: 10px 16px;
+                width: auto;
             }
             
             .sidebar .nav-item i {
