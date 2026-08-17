@@ -1,0 +1,306 @@
+<style>
+    .tag-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .tag-badge:hover {
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .tag-color-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .tag-count {
+        background: rgba(0,0,0,0.1);
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+    .color-picker {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+    .color-option {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .color-option:hover {
+        transform: scale(1.2);
+    }
+    .color-option.selected {
+        border-color: #2c3e50;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-tags"></i> Tag Management</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
+        <i class="fas fa-plus"></i> Create Tag
+    </button>
+</div>
+
+<!-- Tags Grid -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div id="tagsList" class="d-flex flex-wrap"></div>
+    </div>
+</div>
+
+<!-- Leads by Tag -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Filter Leads by Tag</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <select id="tagFilter" class="form-select" onchange="filterLeadsByTag()">
+                <option value="">All Tags</option>
+            </select>
+        </div>
+        <div id="taggedLeadsList"></div>
+    </div>
+</div>
+
+<!-- Add Tag Modal -->
+<div class="modal fade" id="addTagModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Create Tag</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label">Tag Name *</label>
+            <input type="text" id="tagName" class="form-control" placeholder="e.g., VIP, Hot Lead, Follow-up">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Color</label>
+            <div class="color-picker" id="colorPicker"></div>
+            <input type="hidden" id="selectedColor" value="#25D366">
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="addTag()">Create</button>
+    </div>
+</div></div></div>
+
+<!-- Edit Tag Modal -->
+<div class="modal fade" id="editTagModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Edit Tag</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" id="editTagId">
+        <div class="mb-3">
+            <label class="form-label">Tag Name *</label>
+            <input type="text" id="editTagName" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Color</label>
+            <div class="color-picker" id="editColorPicker"></div>
+            <input type="hidden" id="editSelectedColor" value="#25D366">
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="updateTag()">Update</button>
+    </div>
+</div></div></div>
+
+<script>
+const tagColors = [
+    '#25D366', '#128C7E', '#1976d2', '#f57c00', '#7b1fa2',
+    '#388e3c', '#d32f2f', '#c2185b', '#0097a7', '#5d4037',
+    '#303f9f', '#e64a19', '#00796b', '#455a64', '#fbc02d'
+];
+
+let allTags = [];
+let allLeads = [];
+
+function renderColorPicker(containerId, hiddenInputId, selectedColor) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = tagColors.map(color => `
+        <div class="color-option ${color === selectedColor ? 'selected' : ''}" 
+             style="background-color: ${color};" 
+             onclick="selectColor('${color}', '${hiddenInputId}', this)"></div>
+    `).join('');
+}
+
+window.selectColor = function(color, hiddenInputId, element) {
+    document.getElementById(hiddenInputId).value = color;
+    element.parentElement.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
+    element.classList.add('selected');
+};
+
+async function loadTags() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const [tagsResult, leadsResult] = await Promise.all([
+        window.supabase.from('tags').select('*').eq('user_id', user.id),
+        window.supabase.from('leads').select('*').eq('user_id', user.id)
+    ]);
+    
+    allTags = tagsResult.data || [];
+    allLeads = leadsResult.data || [];
+    
+    displayTags();
+    populateTagFilter();
+}
+
+function displayTags() {
+    if (allTags.length === 0) {
+        document.getElementById('tagsList').innerHTML = `
+            <div class="text-center w-100 py-4">
+                <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                <h6>No tags yet</h6>
+                <p class="text-muted">Create tags to organize your leads</p>
+            </div>
+        `;
+        return;
+    }
+    
+    document.getElementById('tagsList').innerHTML = allTags.map(tag => {
+        const taggedLeads = allLeads.filter(lead => 
+            lead.tags && lead.tags.split(',').map(t => t.trim()).includes(tag.name)
+        );
+        
+        return `
+            <div class="tag-badge" style="background-color: ${tag.color}20; color: ${tag.color}; border: 1px solid ${tag.color}40;">
+                <span class="tag-color-dot" style="background-color: ${tag.color};"></span>
+                ${tag.name}
+                <span class="tag-count">${taggedLeads.length}</span>
+                <button class="btn btn-sm p-0 ms-1" onclick="editTag(${tag.id})" style="color: ${tag.color};">
+                    <i class="fas fa-edit" style="font-size: 11px;"></i>
+                </button>
+                <button class="btn btn-sm p-0 ms-1" onclick="deleteTag(${tag.id})" style="color: #d32f2f;">
+                    <i class="fas fa-trash" style="font-size: 11px;"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+function populateTagFilter() {
+    const select = document.getElementById('tagFilter');
+    select.innerHTML = '<option value="">All Tags</option>' + 
+        allTags.map(tag => `<option value="${tag.name}">${tag.name}</option>`).join('');
+}
+
+window.addTag = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const tagName = document.getElementById('tagName').value.trim();
+    const color = document.getElementById('selectedColor').value;
+    
+    if (!tagName) {
+        alert('Please enter tag name');
+        return;
+    }
+    
+    const { error } = await window.supabase.from('tags').insert([{
+        user_id: user.id,
+        name: tagName,
+        color: color
+    }]);
+    
+    if (error) {
+        alert('Failed to create tag: ' + error.message);
+    } else {
+        $('#addTagModal').modal('hide');
+        document.getElementById('tagName').value = '';
+        loadTags();
+    }
+};
+
+window.editTag = function(id) {
+    const tag = allTags.find(t => t.id === id);
+    if (tag) {
+        document.getElementById('editTagId').value = tag.id;
+        document.getElementById('editTagName').value = tag.name;
+        document.getElementById('editSelectedColor').value = tag.color;
+        renderColorPicker('editColorPicker', 'editSelectedColor', tag.color);
+        $('#editTagModal').modal('show');
+    }
+};
+
+window.updateTag = async function() {
+    const id = document.getElementById('editTagId').value;
+    const tagName = document.getElementById('editTagName').value.trim();
+    const color = document.getElementById('editSelectedColor').value;
+    
+    const { error } = await window.supabase.from('tags').update({
+        name: tagName,
+        color: color
+    }).eq('id', id);
+    
+    if (error) {
+        alert('Failed to update: ' + error.message);
+    } else {
+        $('#editTagModal').modal('hide');
+        loadTags();
+    }
+};
+
+window.deleteTag = async function(id) {
+    if (confirm('Delete this tag?')) {
+        await window.supabase.from('tags').delete().eq('id', id);
+        loadTags();
+    }
+};
+
+window.filterLeadsByTag = function() {
+    const selectedTag = document.getElementById('tagFilter').value;
+    
+    if (!selectedTag) {
+        document.getElementById('taggedLeadsList').innerHTML = '<p class="text-muted">Select a tag to see leads</p>';
+        return;
+    }
+    
+    const filteredLeads = allLeads.filter(lead => 
+        lead.tags && lead.tags.split(',').map(t => t.trim()).includes(selectedTag)
+    );
+    
+    if (filteredLeads.length === 0) {
+        document.getElementById('taggedLeadsList').innerHTML = '<p class="text-muted">No leads with this tag</p>';
+        return;
+    }
+    
+    document.getElementById('taggedLeadsList').innerHTML = `
+        <table class="table table-striped">
+            <thead>
+                <tr><th>Name</th><th>Phone</th><th>Company</th><th>Status</th><th>Tags</th></tr>
+            </thead>
+            <tbody>
+                ${filteredLeads.map(lead => `
+                    <tr>
+                        <td>${lead.name}</td>
+                        <td>${lead.phone}</td>
+                        <td>${lead.company || '-'}</td>
+                        <td>${lead.status}</td>
+                        <td>${lead.tags || '-'}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+};
+
+// Initialize color pickers
+renderColorPicker('colorPicker', 'selectedColor', '#25D366');
+
+loadTags();
+</script>
