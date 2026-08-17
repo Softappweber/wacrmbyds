@@ -1,0 +1,146 @@
+<style>
+    .score-card {
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 3px solid #25D366;
+        background: #f8f9fa;
+    }
+    .score-number {
+        font-size: 28px;
+        font-weight: bold;
+        color: #25D366;
+    }
+    .score-high { border-left-color: #388e3c; }
+    .score-medium { border-left-color: #f57c00; }
+    .score-low { border-left-color: #d32f2f; }
+    .score-badge {
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+    }
+    .badge-hot { background: #ffebee; color: #d32f2f; }
+    .badge-warm { background: #fff3e0; color: #f57c00; }
+    .badge-cold { background: #e3f2fd; color: #1976d2; }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-star"></i> Lead Scoring</h3>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> 
+    Leads are scored based on their engagement. Higher score = more likely to convert.
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Score Summary</h5></div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h3 class="text-danger" id="hotLeadsCount">0</h3>
+                <small>Hot Leads (Score 70+)</small>
+            </div>
+            <div class="col-md-4">
+                <h3 class="text-warning" id="warmLeadsCount">0</h3>
+                <small>Warm Leads (Score 40-69)</small>
+            </div>
+            <div class="col-md-4">
+                <h3 class="text-primary" id="coldLeadsCount">0</h3>
+                <small>Cold Leads (Score below 40)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="scoredLeadsList"></div>
+
+<script>
+async function loadLeadScores() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const [leadsResult, chatResult] = await Promise.all([
+        window.supabase.from('leads').select('*').eq('user_id', user.id),
+        window.supabase.from('chat_history').select('*').eq('user_id', user.id)
+    ]);
+    
+    const leads = leadsResult.data || [];
+    const chatHistory = chatResult.data || [];
+    
+    // Score each lead
+    const scoredLeads = leads.map(lead => {
+        let score = 0;
+        
+        // Status points
+        if (lead.status === 'New') score += 10;
+        if (lead.status === 'Contacted') score += 25;
+        if (lead.status === 'Interested') score += 50;
+        if (lead.status === 'Converted') score += 100;
+        if (lead.status === 'Lost') score -= 20;
+        
+        // Chat history points
+        const leadChats = chatHistory.filter(c => c.lead_id === lead.id);
+        score += leadChats.length * 5;
+        
+        // Tags points
+        if (lead.tags) {
+            if (lead.tags.includes('VIP') || lead.tags.includes('Hot')) score += 30;
+            if (lead.tags.includes('Follow-up')) score += 15;
+        }
+        
+        // Company points
+        if (lead.company) score += 5;
+        
+        return { ...lead, score: Math.max(0, Math.min(100, score)) };
+    });
+    
+    // Sort by score
+    scoredLeads.sort((a, b) => b.score - a.score);
+    
+    // Update summary
+    const hot = scoredLeads.filter(l => l.score >= 70).length;
+    const warm = scoredLeads.filter(l => l.score >= 40 && l.score < 70).length;
+    const cold = scoredLeads.filter(l => l.score < 40).length;
+    
+    document.getElementById('hotLeadsCount').textContent = hot;
+    document.getElementById('warmLeadsCount').textContent = warm;
+    document.getElementById('coldLeadsCount').textContent = cold;
+    
+    // Display
+    if (scoredLeads.length > 0) {
+        document.getElementById('scoredLeadsList').innerHTML = scoredLeads.map(lead => {
+            let scoreClass = 'score-low';
+            let badgeClass = 'badge-cold';
+            let badgeText = 'Cold';
+            
+            if (lead.score >= 70) {
+                scoreClass = 'score-high';
+                badgeClass = 'badge-hot';
+                badgeText = 'Hot';
+            } else if (lead.score >= 40) {
+                scoreClass = 'score-medium';
+                badgeClass = 'badge-warm';
+                badgeText = 'Warm';
+            }
+            
+            return `
+                <div class="score-card ${scoreClass}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${lead.name}</strong>
+                            <br><small class="text-muted">${lead.phone} | ${lead.status}</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="score-number">${lead.score}</div>
+                            <span class="score-badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+loadLeadScores();
+</script>
