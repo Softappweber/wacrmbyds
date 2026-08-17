@@ -1,0 +1,339 @@
+<style>
+    .settings-section {
+        margin-bottom: 30px;
+    }
+    .settings-card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 10px;
+    }
+    .settings-card .card-header {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    .avatar-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: #25D366;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin: 0 auto 15px;
+    }
+    .danger-zone {
+        border: 1px solid #ffebee;
+        background-color: #fff5f5;
+        border-radius: 10px;
+        padding: 20px;
+    }
+</style>
+
+<h3 class="mb-4"><i class="fas fa-cog"></i> Settings</h3>
+
+<div class="row">
+    <!-- Profile Section -->
+    <div class="col-md-6">
+        <div class="card settings-card mb-4">
+            <div class="card-header">Profile Information</div>
+            <div class="card-body text-center">
+                <div class="avatar-circle" id="avatarLetter">A</div>
+                <h5 id="profileEmail">Loading...</h5>
+                <p class="text-muted">Member since: <span id="memberSince">-</span></p>
+                
+                <hr>
+                
+                <div class="text-start">
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="fullName" class="form-control" placeholder="Enter your full name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" id="userPhone" class="form-control" placeholder="Your WhatsApp number">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveProfile()">
+                        <i class="fas fa-save"></i> Save Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preferences Section -->
+    <div class="col-md-6">
+        <div class="card settings-card mb-4">
+            <div class="card-header">Preferences</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Default Message Delay (seconds)</label>
+                    <input type="number" id="defaultDelay" class="form-control" value="3" min="1" max="30">
+                    <small class="text-muted">Used in bulk sending</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Default Lead Status</label>
+                    <select id="defaultStatus" class="form-select">
+                        <option>New</option>
+                        <option>Contacted</option>
+                        <option>Interested</option>
+                        <option>Converted</option>
+                        <option>Lost</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Default Country Code</label>
+                    <input type="text" id="countryCode" class="form-control" value="91" placeholder="e.g., 91 for India">
+                </div>
+                
+                <button class="btn btn-primary" onclick="savePreferences()">
+                    <i class="fas fa-save"></i> Save Preferences
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Settings -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card settings-card mb-4">
+            <div class="card-header">Notifications</div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="notifyNewLead">
+                    <label class="form-check-label">Notify when new lead is added</label>
+                </div>
+                
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="notifyFollowup">
+                    <label class="form-check-label">Notify for follow-up reminders</label>
+                </div>
+                
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="notifyBulkComplete">
+                    <label class="form-check-label">Notify when bulk send completes</label>
+                </div>
+                
+                <button class="btn btn-primary" onclick="saveNotifications()">
+                    <i class="fas fa-bell"></i> Save Notifications
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Stats -->
+    <div class="col-md-6">
+        <div class="card settings-card mb-4">
+            <div class="card-header">Account Statistics</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Leads:</span>
+                    <strong id="statLeads">0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Templates:</span>
+                    <strong id="statTemplates">0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Follow-ups:</span>
+                    <strong id="statFollowups">0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Messages Sent:</span>
+                    <strong id="statMessages">0</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Danger Zone -->
+<div class="row">
+    <div class="col-12">
+        <div class="danger-zone">
+            <h5 class="text-danger mb-3">Danger Zone</h5>
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <strong>Clear All Data</strong>
+                    <br><small class="text-muted">Delete all leads, templates, follow-ups, and activity logs</small>
+                </div>
+                <button class="btn btn-danger" onclick="clearAllData()">
+                    <i class="fas fa-trash"></i> Clear All
+                </button>
+            </div>
+            
+            <hr>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Delete Account</strong>
+                    <br><small class="text-muted">Permanently delete your account and all data</small>
+                </div>
+                <button class="btn btn-danger" onclick="deleteAccount()">
+                    <i class="fas fa-user-times"></i> Delete Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadSettings() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    // Profile
+    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('avatarLetter').textContent = user.email.charAt(0).toUpperCase();
+    
+    const createdAt = new Date(user.created_at);
+    document.getElementById('memberSince').textContent = createdAt.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    
+    // Load profile data
+    const { data: profile } = await window.supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (profile) {
+        document.getElementById('fullName').value = profile.full_name || '';
+        document.getElementById('userPhone').value = profile.phone || '';
+        document.getElementById('defaultDelay').value = profile.default_delay || 3;
+        document.getElementById('defaultStatus').value = profile.default_status || 'New';
+        document.getElementById('countryCode').value = profile.country_code || '91';
+        
+        document.getElementById('notifyNewLead').checked = profile.notify_new_lead || false;
+        document.getElementById('notifyFollowup').checked = profile.notify_followup || false;
+        document.getElementById('notifyBulkComplete').checked = profile.notify_bulk_complete || false;
+    }
+    
+    // Stats
+    const [leads, templates, followups, activities] = await Promise.all([
+        window.supabase.from('leads').select('*').eq('user_id', user.id),
+        window.supabase.from('templates').select('*').eq('user_id', user.id),
+        window.supabase.from('followups').select('*').eq('user_id', user.id),
+        window.supabase.from('activity_log').select('*').eq('user_id', user.id)
+    ]);
+    
+    document.getElementById('statLeads').textContent = leads.data?.length || 0;
+    document.getElementById('statTemplates').textContent = templates.data?.length || 0;
+    document.getElementById('statFollowups').textContent = followups.data?.length || 0;
+    document.getElementById('statMessages').textContent = activities.data?.filter(a => a.action.includes('WhatsApp') || a.action.includes('Bulk')).length || 0;
+}
+
+window.saveProfile = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const fullName = document.getElementById('fullName').value;
+    const phone = document.getElementById('userPhone').value;
+    
+    const { data: existing } = await window.supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (existing) {
+        await window.supabase.from('profiles').update({
+            full_name: fullName,
+            phone: phone
+        }).eq('user_id', user.id);
+    } else {
+        await window.supabase.from('profiles').insert([{
+            user_id: user.id,
+            full_name: fullName,
+            phone: phone
+        }]);
+    }
+    
+    alert('Profile saved!');
+};
+
+window.savePreferences = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const prefs = {
+        default_delay: parseInt(document.getElementById('defaultDelay').value),
+        default_status: document.getElementById('defaultStatus').value,
+        country_code: document.getElementById('countryCode').value
+    };
+    
+    const { data: existing } = await window.supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (existing) {
+        await window.supabase.from('profiles').update(prefs).eq('user_id', user.id);
+    } else {
+        await window.supabase.from('profiles').insert([{ user_id: user.id, ...prefs }]);
+    }
+    
+    alert('Preferences saved!');
+};
+
+window.saveNotifications = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const notifs = {
+        notify_new_lead: document.getElementById('notifyNewLead').checked,
+        notify_followup: document.getElementById('notifyFollowup').checked,
+        notify_bulk_complete: document.getElementById('notifyBulkComplete').checked
+    };
+    
+    const { data: existing } = await window.supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (existing) {
+        await window.supabase.from('profiles').update(notifs).eq('user_id', user.id);
+    } else {
+        await window.supabase.from('profiles').insert([{ user_id: user.id, ...notifs }]);
+    }
+    
+    alert('Notification settings saved!');
+};
+
+window.clearAllData = async function() {
+    if (confirm('WARNING: This will delete ALL your data. Are you sure?')) {
+        if (confirm('Final confirmation: This cannot be undone. Continue?')) {
+            const { data: { user } } = await window.supabase.auth.getUser();
+            if (!user) return;
+            
+            await window.supabase.from('leads').delete().eq('user_id', user.id);
+            await window.supabase.from('templates').delete().eq('user_id', user.id);
+            await window.supabase.from('followups').delete().eq('user_id', user.id);
+            await window.supabase.from('activity_log').delete().eq('user_id', user.id);
+            
+            alert('All data cleared!');
+            loadSettings();
+        }
+    }
+};
+
+window.deleteAccount = async function() {
+    if (confirm('WARNING: This will permanently delete your account. Are you sure?')) {
+        if (confirm('Final confirmation: This cannot be undone. Continue?')) {
+            alert('Please contact support to delete your account. This feature is disabled for safety.');
+        }
+    }
+};
+
+loadSettings();
+</script>
