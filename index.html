@@ -679,6 +679,15 @@ window.logout = async function() { await supabase.auth.signOut(); };
 window.toggleSidebar = function() {
     document.getElementById('sidebar').classList.toggle('collapsed');
     document.getElementById('mainContent').classList.toggle('expanded');
+    // Change arrow direction
+    const icon = document.getElementById('toggleIcon');
+    if (icon.classList.contains('fa-chevron-left')) {
+        icon.classList.remove('fa-chevron-left');
+        icon.classList.add('fa-chevron-right');
+    } else {
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-left');
+    }
 };
 
 window.toggleMobileSidebar = function() {
