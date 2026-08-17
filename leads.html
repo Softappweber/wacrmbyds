@@ -1,11 +1,45 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 <style>
-    .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; }
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
     .status-New { background-color: #e3f2fd; color: #1976d2; }
     .status-Contacted { background-color: #fff3e0; color: #f57c00; }
     .status-Interested { background-color: #f3e5f5; color: #7b1fa2; }
     .status-Converted { background-color: #e8f5e9; color: #388e3c; }
     .status-Lost { background-color: #ffebee; color: #d32f2f; }
+    
+    .lead-tag-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        margin: 2px;
+    }
+    .tag-checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 5px;
+    }
+    .tag-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        transition: all 0.2s;
+    }
+    .tag-checkbox-item:hover {
+        background-color: #f0f0f0;
+    }
+    .tag-checkbox-item.checked {
+        background-color: #e8f5e9;
+    }
 </style>
 
 <div class="d-flex justify-content-between mb-3">
@@ -18,6 +52,18 @@
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLeadModal">
             <i class="fas fa-plus"></i> Add Lead
         </button>
+    </div>
+</div>
+
+<!-- Tag Filter -->
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <strong><i class="fas fa-filter"></i> Filter by Tag:</strong>
+            <div id="tagFilterButtons" class="d-flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-outline-primary active" onclick="filterByTag('all', this)">All</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -43,7 +89,8 @@
         <select id="leadStatus" class="form-select mb-3">
             <option>New</option><option>Contacted</option><option>Interested</option><option>Converted</option><option>Lost</option>
         </select>
-        <input type="text" id="leadTags" class="form-control" placeholder="Tags (comma separated)">
+        <label class="form-label">Tags</label>
+        <div class="tag-checkbox-group" id="addLeadTags"></div>
     </div>
     <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -63,7 +110,8 @@
         <select id="editLeadStatus" class="form-select mb-3">
             <option>New</option><option>Contacted</option><option>Interested</option><option>Converted</option><option>Lost</option>
         </select>
-        <input type="text" id="editLeadTags" class="form-control" placeholder="Tags (comma separated)">
+        <label class="form-label">Tags</label>
+        <div class="tag-checkbox-group" id="editLeadTags"></div>
     </div>
     <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -77,6 +125,67 @@
 
 <script>
 let leadsDataTable;
+let allLeadsData = [];
+let allTagsData = [];
+let selectedAddTags = new Set();
+let selectedEditTags = new Set();
+let currentTagFilter = 'all';
+
+async function loadTags() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: tags } = await window.supabase
+        .from('tags')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+    
+    allTagsData = tags || [];
+    
+    // Populate tag filter buttons
+    const filterDiv = document.getElementById('tagFilterButtons');
+    filterDiv.innerHTML = '<button class="btn btn-sm btn-outline-primary active" onclick="filterByTag(\'all\', this)">All</button>' +
+        allTagsData.map(tag => `
+            <button class="btn btn-sm btn-outline-primary" onclick="filterByTag('${tag.name}', this)" style="border-color: ${tag.color}; color: ${tag.color};">
+                ${tag.name}
+            </button>
+        `).join('');
+    
+    // Populate Add Lead tag checkboxes
+    document.getElementById('addLeadTags').innerHTML = allTagsData.map(tag => `
+        <div class="tag-checkbox-item" id="addTagItem${tag.id}" onclick="toggleAddTag(${tag.id})">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${tag.color}; display: inline-block;"></span>
+            ${tag.name}
+        </div>
+    `).join('');
+}
+
+function toggleAddTag(tagId) {
+    const tag = allTagsData.find(t => t.id === tagId);
+    const element = document.getElementById('addTagItem' + tagId);
+    
+    if (selectedAddTags.has(tag.name)) {
+        selectedAddTags.delete(tag.name);
+        element.classList.remove('checked');
+    } else {
+        selectedAddTags.add(tag.name);
+        element.classList.add('checked');
+    }
+}
+
+function toggleEditTag(tagId) {
+    const tag = allTagsData.find(t => t.id === tagId);
+    const element = document.getElementById('editTagItem' + tagId);
+    
+    if (selectedEditTags.has(tag.name)) {
+        selectedEditTags.delete(tag.name);
+        element.classList.remove('checked');
+    } else {
+        selectedEditTags.add(tag.name);
+        element.classList.add('checked');
+    }
+}
 
 async function loadLeads() {
     const { data: { user } } = await window.supabase.auth.getUser();
@@ -88,32 +197,65 @@ async function loadLeads() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
     
-    if (leads) {
-        const html = leads.map(lead => `
+    allLeadsData = leads || [];
+    displayLeads(allLeadsData);
+}
+
+function displayLeads(leads) {
+    const html = leads.map(lead => {
+        const leadTags = lead.tags ? lead.tags.split(',').map(t => t.trim()).filter(t => t) : [];
+        
+        const tagBadges = leadTags.map(tagName => {
+            const tagObj = allTagsData.find(t => t.name === tagName);
+            const color = tagObj ? tagObj.color : '#666';
+            return `<span class="lead-tag-badge" style="background-color: ${color}20; color: ${color}; border: 1px solid ${color}40;">${tagName}</span>`;
+        }).join('');
+        
+        return `
             <tr>
                 <td>${lead.name}</td>
                 <td>${lead.phone}</td>
                 <td>${lead.email || '-'}</td>
                 <td>${lead.company || '-'}</td>
                 <td><span class="status-badge status-${lead.status}">${lead.status}</span></td>
-                <td>${lead.tags || '-'}</td>
+                <td>${tagBadges || '-'}</td>
                 <td>
                     <button class="btn btn-sm btn-success" onclick="openWhatsApp('${lead.phone}')"><i class="fab fa-whatsapp"></i></button>
                     <button class="btn btn-sm btn-primary" onclick="editLead(${lead.id})"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-sm btn-danger" onclick="deleteLead(${lead.id})"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
-        `).join('');
-        
-        document.getElementById('leadsTableBody').innerHTML = html;
-        if (leadsDataTable) leadsDataTable.destroy();
-        leadsDataTable = $('#leadsTable').DataTable();
-    }
+        `;
+    }).join('');
+    
+    document.getElementById('leadsTableBody').innerHTML = html;
+    if (leadsDataTable) leadsDataTable.destroy();
+    leadsDataTable = $('#leadsTable').DataTable();
 }
+
+window.filterByTag = function(tagName, button) {
+    currentTagFilter = tagName;
+    
+    document.querySelectorAll('#tagFilterButtons .btn').forEach(b => b.classList.remove('active'));
+    button.classList.add('active');
+    
+    if (tagName === 'all') {
+        displayLeads(allLeadsData);
+        return;
+    }
+    
+    const filtered = allLeadsData.filter(lead => 
+        lead.tags && lead.tags.split(',').map(t => t.trim()).includes(tagName)
+    );
+    
+    displayLeads(filtered);
+};
 
 window.addLead = async function() {
     const { data: { user } } = await window.supabase.auth.getUser();
     if (!user) return;
+    
+    const tagsString = Array.from(selectedAddTags).join(', ');
     
     const { error } = await window.supabase.from('leads').insert([{
         user_id: user.id,
@@ -122,11 +264,12 @@ window.addLead = async function() {
         email: document.getElementById('leadEmail').value,
         company: document.getElementById('leadCompany').value,
         status: document.getElementById('leadStatus').value,
-        tags: document.getElementById('leadTags').value
+        tags: tagsString
     }]);
     
     if (error) { alert(error.message); } else {
         $('#addLeadModal').modal('hide');
+        selectedAddTags.clear();
         loadLeads();
     }
 };
@@ -140,20 +283,34 @@ window.editLead = async function(id) {
         document.getElementById('editLeadEmail').value = lead.email || '';
         document.getElementById('editLeadCompany').value = lead.company || '';
         document.getElementById('editLeadStatus').value = lead.status;
-        document.getElementById('editLeadTags').value = lead.tags || '';
+        
+        // Populate edit tag checkboxes
+        selectedEditTags.clear();
+        const leadTags = lead.tags ? lead.tags.split(',').map(t => t.trim()) : [];
+        leadTags.forEach(t => selectedEditTags.add(t));
+        
+        document.getElementById('editLeadTags').innerHTML = allTagsData.map(tag => `
+            <div class="tag-checkbox-item ${selectedEditTags.has(tag.name) ? 'checked' : ''}" id="editTagItem${tag.id}" onclick="toggleEditTag(${tag.id})">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${tag.color}; display: inline-block;"></span>
+                ${tag.name}
+            </div>
+        `).join('');
+        
         $('#editLeadModal').modal('show');
     }
 };
 
 window.updateLead = async function() {
     const id = document.getElementById('editLeadId').value;
+    const tagsString = Array.from(selectedEditTags).join(', ');
+    
     const { error } = await window.supabase.from('leads').update({
         name: document.getElementById('editLeadName').value,
         phone: document.getElementById('editLeadPhone').value,
         email: document.getElementById('editLeadEmail').value,
         company: document.getElementById('editLeadCompany').value,
         status: document.getElementById('editLeadStatus').value,
-        tags: document.getElementById('editLeadTags').value
+        tags: tagsString
     }).eq('id', id);
     
     if (error) { alert(error.message); } else {
@@ -176,11 +333,9 @@ window.openWhatsApp = function(phone) {
 window.importCSV = function(event) {
     const file = event.target.files[0];
     const reader = new FileReader();
-    
     reader.onload = async function(e) {
         const lines = e.target.result.split('\n');
         const { data: { user } } = await window.supabase.auth.getUser();
-        
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
             const v = lines[i].split(',');
@@ -197,9 +352,10 @@ window.importCSV = function(event) {
         loadLeads();
         alert('CSV imported!');
     };
-    
     reader.readAsText(file);
 };
 
+// Initialize
+loadTags();
 loadLeads();
 </script>
