@@ -1,0 +1,345 @@
+<style>
+    .team-member-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #25D366;
+        transition: all 0.3s;
+    }
+    .team-member-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .member-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #25D366, #128C7E);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: bold;
+        color: white;
+    }
+    .role-badge {
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .role-admin { background-color: #e8f5e9; color: #388e3c; }
+    .role-manager { background-color: #e3f2fd; color: #1976d2; }
+    .role-member { background-color: #fff3e0; color: #f57c00; }
+    .role-viewer { background-color: #f5f5f5; color: #666; }
+    .invite-pending { background-color: #fce4ec; color: #c2185b; }
+    .permission-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .permission-item:last-child {
+        border-bottom: none;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-users-cog"></i> Team Management</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteMemberModal">
+        <i class="fas fa-user-plus"></i> Invite Member
+    </button>
+</div>
+
+<!-- Team Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="totalMembers">0</h4>
+            <small class="text-muted">Total Members</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="activeMembers">0</h4>
+            <small class="text-muted">Active</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="pendingInvites">0</h4>
+            <small class="text-muted">Pending Invites</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="sharedLeadsCount">0</h4>
+            <small class="text-muted">Shared Leads</small>
+        </div>
+    </div>
+</div>
+
+<!-- Team Members List -->
+<div id="teamMembersList"></div>
+
+<!-- Invite Member Modal -->
+<div class="modal fade" id="inviteMemberModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Invite Team Member</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label">Email Address *</label>
+            <input type="email" id="inviteEmail" class="form-control" placeholder="teammate@email.com">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Role *</label>
+            <select id="inviteRole" class="form-select" onchange="updatePermissionPreview()">
+                <option value="Admin">Admin - Full access to everything</option>
+                <option value="Manager">Manager - Manage leads and campaigns</option>
+                <option value="Member">Member - Add and edit leads</option>
+                <option value="Viewer">Viewer - View only</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Permissions Preview</label>
+            <div id="permissionPreview" class="p-3" style="background: #f8f9fa; border-radius: 8px;"></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="inviteMember()">Send Invite</button>
+    </div>
+</div></div></div>
+
+<!-- Edit Member Role Modal -->
+<div class="modal fade" id="editMemberModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Edit Member Role</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" id="editMemberId">
+        <div class="mb-3">
+            <label class="form-label">Member Email</label>
+            <input type="text" id="editMemberEmail" class="form-control" readonly>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Role</label>
+            <select id="editMemberRole" class="form-select">
+                <option value="Admin">Admin</option>
+                <option value="Manager">Manager</option>
+                <option value="Member">Member</option>
+                <option value="Viewer">Viewer</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select id="editMemberStatus" class="form-select">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="updateMember()">Update</button>
+    </div>
+</div></div></div>
+
+<script>
+const rolePermissions = {
+    'Admin': ['View all leads', 'Add leads', 'Edit leads', 'Delete leads', 'Send messages', 'Create campaigns', 'Manage team', 'View analytics', 'Export data', 'Settings access'],
+    'Manager': ['View all leads', 'Add leads', 'Edit leads', 'Send messages', 'Create campaigns', 'View analytics', 'Export data'],
+    'Member': ['View assigned leads', 'Add leads', 'Edit assigned leads', 'Send messages'],
+    'Viewer': ['View assigned leads', 'View analytics']
+};
+
+async function loadTeamMembers() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const [membersResult, invitesResult, leadsResult] = await Promise.all([
+        window.supabase.from('team_members').select('*').eq('owner_id', user.id),
+        window.supabase.from('team_invites').select('*').eq('owner_id', user.id).eq('status', 'Pending'),
+        window.supabase.from('leads').select('*').eq('user_id', user.id)
+    ]);
+    
+    const members = membersResult.data || [];
+    const invites = invitesResult.data || [];
+    const leads = leadsResult.data || [];
+    
+    document.getElementById('totalMembers').textContent = members.length;
+    document.getElementById('activeMembers').textContent = members.filter(m => m.status === 'Active').length;
+    document.getElementById('pendingInvites').textContent = invites.length;
+    document.getElementById('sharedLeadsCount').textContent = leads.length;
+    
+    displayMembers(members, invites);
+}
+
+function displayMembers(members, invites) {
+    let html = '';
+    
+    // Show pending invites
+    invites.forEach(invite => {
+        html += `
+            <div class="team-member-card" style="border-left-color: #c2185b; background: #fff5f5;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="member-avatar" style="background: #ccc;">?</div>
+                        <div>
+                            <strong>${invite.email}</strong>
+                            <br>
+                            <span class="role-badge invite-pending">Invite Pending</span>
+                            <span class="role-badge role-${invite.role.toLowerCase()}">${invite.role}</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="cancelInvite(${invite.id})">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Show members
+    if (members.length === 0 && invites.length === 0) {
+        html += `
+            <div class="text-center py-5">
+                <i class="fas fa-users-cog fa-3x text-muted mb-3"></i>
+                <h5>No team members yet</h5>
+                <p class="text-muted">Invite your team to work together</p>
+            </div>
+        `;
+    } else {
+        members.forEach(member => {
+            html += `
+                <div class="team-member-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="member-avatar">${member.email.charAt(0).toUpperCase()}</div>
+                            <div>
+                                <strong>${member.email}</strong>
+                                <br>
+                                <span class="role-badge role-${member.role.toLowerCase()}">${member.role}</span>
+                                <span class="ms-2 ${member.status === 'Active' ? 'text-success' : 'text-muted'}">
+                                    <i class="fas fa-circle" style="font-size: 8px;"></i> ${member.status}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-primary" onclick="editMember(${member.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="removeMember(${member.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    document.getElementById('teamMembersList').innerHTML = html;
+}
+
+function updatePermissionPreview() {
+    const role = document.getElementById('inviteRole').value;
+    const permissions = rolePermissions[role] || [];
+    
+    document.getElementById('permissionPreview').innerHTML = permissions.map(perm => `
+        <div class="permission-item">
+            <i class="fas fa-check-circle text-success"></i>
+            <span>${perm}</span>
+        </div>
+    `).join('');
+}
+
+window.inviteMember = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const email = document.getElementById('inviteEmail').value.trim();
+    const role = document.getElementById('inviteRole').value;
+    
+    if (!email) {
+        alert('Please enter email address');
+        return;
+    }
+    
+    // Check if already invited or already member
+    const [existingInvite, existingMember] = await Promise.all([
+        window.supabase.from('team_invites').select('*').eq('email', email).eq('owner_id', user.id),
+        window.supabase.from('team_members').select('*').eq('email', email).eq('owner_id', user.id)
+    ]);
+    
+    if (existingInvite.data?.length > 0 || existingMember.data?.length > 0) {
+        alert('This person is already invited or is a member');
+        return;
+    }
+    
+    const { error } = await window.supabase.from('team_invites').insert([{
+        owner_id: user.id,
+        email: email,
+        role: role,
+        status: 'Pending',
+        invite_token: Math.random().toString(36).substring(2) + Date.now().toString(36)
+    }]);
+    
+    if (error) {
+        alert('Failed to send invite: ' + error.message);
+    } else {
+        $('#inviteMemberModal').modal('hide');
+        document.getElementById('inviteEmail').value = '';
+        alert('Invite sent! They will receive an email soon.');
+        loadTeamMembers();
+    }
+};
+
+window.editMember = function(id) {
+    const { data } = window.supabase.from('team_members').select('*').eq('id', id).single();
+    // Since we can't await here, use async
+    (async () => {
+        const { data: member } = await window.supabase.from('team_members').select('*').eq('id', id).single();
+        if (member) {
+            document.getElementById('editMemberId').value = member.id;
+            document.getElementById('editMemberEmail').value = member.email;
+            document.getElementById('editMemberRole').value = member.role;
+            document.getElementById('editMemberStatus').value = member.status;
+            $('#editMemberModal').modal('show');
+        }
+    })();
+};
+
+window.updateMember = async function() {
+    const id = document.getElementById('editMemberId').value;
+    const role = document.getElementById('editMemberRole').value;
+    const status = document.getElementById('editMemberStatus').value;
+    
+    const { error } = await window.supabase.from('team_members').update({
+        role: role,
+        status: status
+    }).eq('id', id);
+    
+    if (error) {
+        alert('Failed to update: ' + error.message);
+    } else {
+        $('#editMemberModal').modal('hide');
+        loadTeamMembers();
+    }
+};
+
+window.removeMember = async function(id) {
+    if (confirm('Remove this team member?')) {
+        await window.supabase.from('team_members').delete().eq('id', id);
+        loadTeamMembers();
+    }
+};
+
+window.cancelInvite = async function(id) {
+    if (confirm('Cancel this invite?')) {
+        await window.supabase.from('team_invites').delete().eq('id', id);
+        loadTeamMembers();
+    }
+};
+
+// Initialize
+updatePermissionPreview();
+loadTeamMembers();
+</script>
