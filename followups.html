@@ -1,0 +1,348 @@
+<style>
+    .followup-card {
+        border-left: 4px solid #25D366;
+        margin-bottom: 15px;
+    }
+    .followup-overdue {
+        border-left-color: #d32f2f;
+    }
+    .followup-today {
+        border-left-color: #f57c00;
+    }
+    .followup-upcoming {
+        border-left-color: #1976d2;
+    }
+    .followup-completed {
+        border-left-color: #388e3c;
+        opacity: 0.7;
+    }
+    .followup-date {
+        font-size: 14px;
+        color: #666;
+    }
+    .followup-status {
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+    }
+    .status-pending { background-color: #fff3e0; color: #f57c00; }
+    .status-done { background-color: #e8f5e9; color: #388e3c; }
+    .status-missed { background-color: #ffebee; color: #d32f2f; }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-clock"></i> Follow-ups</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFollowupModal">
+        <i class="fas fa-plus"></i> Schedule Follow-up
+    </button>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <label class="form-label">Filter by Status</label>
+                <select id="filterStatus" class="form-select" onchange="loadFollowups()">
+                    <option value="all">All</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Done">Done</option>
+                    <option value="Missed">Missed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Filter by Date</label>
+                <select id="filterDate" class="form-select" onchange="loadFollowups()">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="tomorrow">Tomorrow</option>
+                    <option value="week">Next 7 Days</option>
+                    <option value="overdue">Overdue</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Follow-ups List -->
+<div id="followupsList"></div>
+
+<!-- Add Follow-up Modal -->
+<div class="modal fade" id="addFollowupModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Schedule Follow-up</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label">Select Lead *</label>
+            <select id="followupLead" class="form-select"></select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Follow-up Date *</label>
+            <input type="date" id="followupDate" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Time</label>
+            <input type="time" id="followupTime" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea id="followupNotes" class="form-control" rows="3" placeholder="Reason for follow-up..."></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Priority</label>
+            <select id="followupPriority" class="form-select">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="addFollowup()">Schedule</button>
+    </div>
+</div></div></div>
+
+<!-- Edit Follow-up Modal -->
+<div class="modal fade" id="editFollowupModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>Edit Follow-up</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" id="editFollowupId">
+        <div class="mb-3">
+            <label class="form-label">Select Lead *</label>
+            <select id="editFollowupLead" class="form-select"></select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Follow-up Date *</label>
+            <input type="date" id="editFollowupDate" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Time</label>
+            <input type="time" id="editFollowupTime" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea id="editFollowupNotes" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select id="editFollowupStatus" class="form-select">
+                <option>Pending</option>
+                <option>Done</option>
+                <option>Missed</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Priority</label>
+            <select id="editFollowupPriority" class="form-select">
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="updateFollowup()">Update</button>
+    </div>
+</div></div></div>
+
+<script>
+async function loadLeadsForFollowup() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .order('name');
+    
+    const addSelect = document.getElementById('followupLead');
+    const editSelect = document.getElementById('editFollowupLead');
+    
+    if (leads) {
+        const options = leads.map(lead => `<option value="${lead.id}">${lead.name}</option>`).join('');
+        addSelect.innerHTML = '<option value="">Select Lead</option>' + options;
+        editSelect.innerHTML = '<option value="">Select Lead</option>' + options;
+    }
+}
+
+async function loadFollowups() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const filterStatus = document.getElementById('filterStatus').value;
+    const filterDate = document.getElementById('filterDate').value;
+    
+    let query = window.supabase
+        .from('followups')
+        .select('*, leads(name, phone)')
+        .eq('user_id', user.id)
+        .order('followup_date', { ascending: true });
+    
+    if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (filterDate === 'today') {
+        query = query.eq('followup_date', today);
+    } else if (filterDate === 'tomorrow') {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        query = query.eq('followup_date', tomorrow.toISOString().split('T')[0]);
+    } else if (filterDate === 'week') {
+        const weekLater = new Date();
+        weekLater.setDate(weekLater.getDate() + 7);
+        query = query.gte('followup_date', today).lte('followup_date', weekLater.toISOString().split('T')[0]);
+    } else if (filterDate === 'overdue') {
+        query = query.lt('followup_date', today).eq('status', 'Pending');
+    }
+    
+    const { data: followups } = await query;
+    
+    if (followups && followups.length > 0) {
+        document.getElementById('followupsList').innerHTML = followups.map(f => {
+            const followupDate = new Date(f.followup_date);
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            
+            let cardClass = 'followup-upcoming';
+            if (f.status === 'Done') {
+                cardClass = 'followup-completed';
+            } else if (f.status === 'Missed') {
+                cardClass = 'followup-overdue';
+            } else if (followupDate < todayDate) {
+                cardClass = 'followup-overdue';
+            } else if (followupDate.toDateString() === todayDate.toDateString()) {
+                cardClass = 'followup-today';
+            }
+            
+            const statusClass = f.status === 'Pending' ? 'status-pending' : f.status === 'Done' ? 'status-done' : 'status-missed';
+            
+            return `
+                <div class="card followup-card ${cardClass}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">${f.leads?.name || 'Unknown Lead'}</h5>
+                                <p class="mb-1 followup-date">
+                                    <i class="fas fa-calendar"></i> ${f.followup_date} 
+                                    ${f.followup_time ? `| <i class="fas fa-clock"></i> ${f.followup_time}` : ''}
+                                </p>
+                                ${f.notes ? `<p class="mb-2">${f.notes}</p>` : ''}
+                                <span class="badge bg-secondary">${f.priority} Priority</span>
+                                <span class="followup-status ${statusClass}">${f.status}</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-success" onclick="markDone(${f.id})" title="Mark Done">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="editFollowup(${f.id})" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteFollowup(${f.id})" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        document.getElementById('followupsList').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                <h5>No follow-ups found</h5>
+                <p class="text-muted">Schedule a follow-up to stay organized</p>
+            </div>
+        `;
+    }
+}
+
+window.addFollowup = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const followupData = {
+        user_id: user.id,
+        lead_id: document.getElementById('followupLead').value,
+        followup_date: document.getElementById('followupDate').value,
+        followup_time: document.getElementById('followupTime').value,
+        notes: document.getElementById('followupNotes').value,
+        priority: document.getElementById('followupPriority').value,
+        status: 'Pending'
+    };
+    
+    if (!followupData.lead_id || !followupData.followup_date) {
+        alert('Please select a lead and date');
+        return;
+    }
+    
+    const { error } = await window.supabase.from('followups').insert([followupData]);
+    
+    if (error) {
+        alert('Failed to schedule: ' + error.message);
+    } else {
+        $('#addFollowupModal').modal('hide');
+        loadFollowups();
+    }
+};
+
+window.editFollowup = async function(id) {
+    const { data: followup } = await window.supabase
+        .from('followups')
+        .select('*')
+        .eq('id', id)
+        .single();
+    
+    if (followup) {
+        document.getElementById('editFollowupId').value = followup.id;
+        document.getElementById('editFollowupLead').value = followup.lead_id;
+        document.getElementById('editFollowupDate').value = followup.followup_date;
+        document.getElementById('editFollowupTime').value = followup.followup_time || '';
+        document.getElementById('editFollowupNotes').value = followup.notes || '';
+        document.getElementById('editFollowupStatus').value = followup.status;
+        document.getElementById('editFollowupPriority').value = followup.priority;
+        $('#editFollowupModal').modal('show');
+    }
+};
+
+window.updateFollowup = async function() {
+    const id = document.getElementById('editFollowupId').value;
+    const followupData = {
+        lead_id: document.getElementById('editFollowupLead').value,
+        followup_date: document.getElementById('editFollowupDate').value,
+        followup_time: document.getElementById('editFollowupTime').value,
+        notes: document.getElementById('editFollowupNotes').value,
+        status: document.getElementById('editFollowupStatus').value,
+        priority: document.getElementById('editFollowupPriority').value
+    };
+    
+    const { error } = await window.supabase.from('followups').update(followupData).eq('id', id);
+    
+    if (error) {
+        alert('Failed to update: ' + error.message);
+    } else {
+        $('#editFollowupModal').modal('hide');
+        loadFollowups();
+    }
+};
+
+window.markDone = async function(id) {
+    await window.supabase.from('followups').update({ status: 'Done' }).eq('id', id);
+    loadFollowups();
+};
+
+window.deleteFollowup = async function(id) {
+    if (confirm('Delete this follow-up?')) {
+        await window.supabase.from('followups').delete().eq('id', id);
+        loadFollowups();
+    }
+};
+
+loadLeadsForFollowup();
+loadFollowups();
+</script>
