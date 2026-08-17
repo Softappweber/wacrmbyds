@@ -1,0 +1,111 @@
+<style>
+    .reminder-card {
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 3px solid #f57c00;
+        background: #fff8f0;
+    }
+    .reminder-overdue {
+        border-left-color: #d32f2f;
+        background: #fff5f5;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-bell"></i> Reminders</h3>
+    <button class="btn btn-primary" onclick="requestNotificationPermission()">
+        <i class="fas fa-bell"></i> Enable Browser Notifications
+    </button>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> 
+    Reminders are based on your follow-ups. Enable browser notifications to get alerts.
+</div>
+
+<div id="remindersList"></div>
+
+<script>
+async function loadReminders() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: followups } = await window.supabase
+        .from('followups')
+        .select('*, leads(name)')
+        .eq('user_id', user.id)
+        .eq('status', 'Pending')
+        .order('followup_date', { ascending: true })
+        .limit(10);
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (followups && followups.length > 0) {
+        document.getElementById('remindersList').innerHTML = followups.map(f => {
+            const isOverdue = f.followup_date < today;
+            
+            return `
+                <div class="reminder-card ${isOverdue ? 'reminder-overdue' : ''}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${f.leads?.name || 'Lead'}</strong>
+                            <br>
+                            <small>${f.followup_date} ${f.followup_time || ''}</small>
+                            ${f.notes ? `<br><small class="text-muted">${f.notes}</small>` : ''}
+                        </div>
+                        <span class="badge ${isOverdue ? 'bg-danger' : 'bg-warning'}">
+                            ${isOverdue ? 'Overdue' : 'Upcoming'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else {
+        document.getElementById('remindersList').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h5>No pending reminders</h5>
+                <p class="text-muted">Schedule follow-ups to get reminders</p>
+            </div>
+        `;
+    }
+    
+    // Check for upcoming reminders and notify
+    checkUpcomingReminders(followups);
+}
+
+function checkUpcomingReminders(followups) {
+    if (!followups) return;
+    
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    followups.forEach(f => {
+        if (f.followup_date === today) {
+            if (Notification.permission === 'granted') {
+                new Notification('Follow-up Reminder', {
+                    body: `Follow up with ${f.leads?.name || 'lead'} today!`,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png'
+                });
+            }
+        }
+    });
+}
+
+window.requestNotificationPermission = function() {
+    if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                alert('Browser notifications enabled!');
+            } else {
+                alert('Notification permission denied.');
+            }
+        });
+    } else {
+        alert('Browser notifications not supported.');
+    }
+};
+
+loadReminders();
+</script>
