@@ -449,6 +449,12 @@
                         <button onclick="signup()" class="btn btn-primary w-100">Sign Up</button>
                     </div>
                     <div id="authMessage" class="mt-2"></div>
+                    <div id="installPrompt" style="display:none; margin-top: 15px;">
+                    <button class="btn btn-success w-100" onclick="installPWA()">
+                    <i class="fas fa-download"></i> Install App
+    </button>
+</div>
+                    
                 </div>
             </div>
         </div>
@@ -785,6 +791,27 @@ window.toggleEnhancementsDropdown = function() {
         dropdown.style.display = 'none';
         arrow.classList.remove('fa-chevron-up');
         arrow.classList.add('fa-chevron-down');
+    }
+};
+
+    let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    document.getElementById('installPrompt').style.display = 'block';
+});
+
+window.installPWA = async function() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const result = await deferredInstallPrompt.userChoice;
+        if (result.outcome === 'accepted') {
+            document.getElementById('installPrompt').style.display = 'none';
+        }
+        deferredInstallPrompt = null;
+    } else {
+        alert('To install:\n\nAndroid: Chrome menu → Add to Home Screen\n\niPhone: Safari → Share → Add to Home Screen');
     }
 };
     
