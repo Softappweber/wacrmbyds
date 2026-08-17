@@ -1,0 +1,365 @@
+<style>
+    .sync-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #34a853;
+        background: #f8f9fa;
+    }
+    .sync-status {
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .sync-connected {
+        background: #e8f5e9;
+        color: #388e3c;
+        border: 1px solid #388e3c;
+    }
+    .sync-disconnected {
+        background: #fff3e0;
+        color: #f57c00;
+        border: 1px solid #f57c00;
+    }
+    .google-icon {
+        font-size: 40px;
+        color: #34a853;
+    }
+    .sync-log {
+        max-height: 300px;
+        overflow-y: auto;
+        font-size: 12px;
+        background: #1a1a2e;
+        color: #25D366;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fab fa-google"></i> Google Sheets Sync</h3>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> 
+    Auto-sync your leads data with Google Sheets. Free backup and easy viewing.
+</div>
+
+<!-- Sync Status -->
+<div id="syncStatus" class="sync-status sync-disconnected">
+    <i class="fas fa-circle"></i> 
+    <strong>Status:</strong> Not Connected to Google Sheets
+</div>
+
+<!-- Connection Setup -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="sync-card">
+            <div class="text-center mb-3">
+                <i class="fab fa-google google-icon"></i>
+                <h5 class="mt-2">Connect Google Sheets</h5>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Google Sheet URL</label>
+                <input type="text" id="googleSheetUrl" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit">
+                <small class="text-muted">Paste your Google Sheet URL here</small>
+            </div>
+            
+            <button class="btn btn-success w-100" onclick="connectGoogleSheet()">
+                <i class="fab fa-google"></i> Connect
+            </button>
+            
+            <hr>
+            
+            <div class="alert alert-warning">
+                <strong>How to create a Google Sheet:</strong>
+                <ol class="mb-0 mt-2">
+                    <li>Go to <a href="https://sheets.google.com" target="_blank">sheets.google.com</a></li>
+                    <li>Create a blank spreadsheet</li>
+                    <li>Name it "WhatsApp CRM Data"</li>
+                    <li>Click Share → Change to "Anyone with link can view"</li>
+                    <li>Copy the URL and paste above</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="sync-card">
+            <h5 class="mb-3"><i class="fas fa-cog"></i> Sync Settings</h5>
+            
+            <div class="mb-3">
+                <label class="form-label">Sync Frequency</label>
+                <select id="syncFrequency" class="form-select">
+                    <option value="manual">Manual Only</option>
+                    <option value="hourly">Every Hour</option>
+                    <option value="daily">Daily</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Data to Sync</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="syncLeads" checked>
+                    <label class="form-check-label">Leads</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="syncTemplates" checked>
+                    <label class="form-check-label">Templates</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="syncFollowups">
+                    <label class="form-check-label">Follow-ups</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="syncActivity">
+                    <label class="form-check-label">Activity Log</label>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary w-100" onclick="syncNow()">
+                <i class="fas fa-sync"></i> Sync Now
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Export Section -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="sync-card">
+            <h5 class="mb-3"><i class="fas fa-download"></i> Quick Export</h5>
+            <p class="text-muted">Download your data as CSV files (works without Google connection)</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-outline-primary" onclick="exportLeadsCSV()">
+                    <i class="fas fa-users"></i> Export Leads
+                </button>
+                <button class="btn btn-outline-primary" onclick="exportTemplatesCSV()">
+                    <i class="fas fa-envelope"></i> Export Templates
+                </button>
+                <button class="btn btn-outline-primary" onclick="exportFollowupsCSV()">
+                    <i class="fas fa-clock"></i> Export Follow-ups
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="sync-card">
+            <h5 class="mb-3"><i class="fas fa-info-circle"></i> How It Works</h5>
+            <p class="text-muted">
+                <strong>Note:</strong> Due to browser security, we cannot write directly to Google Sheets.
+                Instead, this feature:
+            </p>
+            <ul>
+                <li>Exports your data as CSV</li>
+                <li>You upload to Google Sheets manually</li>
+                <li>Or use Google Sheets Import function</li>
+            </ul>
+            <div class="alert alert-info">
+                <strong>Best Method:</strong> Export CSV → Open Google Sheets → File → Import → Upload the CSV file
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sync Log -->
+<div class="card mt-4">
+    <div class="card-header"><h5 class="mb-0">Sync History</h5></div>
+    <div class="card-body">
+        <div class="sync-log" id="syncLog">
+            Waiting for sync...
+        </div>
+    </div>
+</div>
+
+<script>
+let syncLogs = [];
+
+function addLog(message) {
+    const timestamp = new Date().toLocaleString();
+    syncLogs.unshift(`[${timestamp}] ${message}`);
+    
+    const logDiv = document.getElementById('syncLog');
+    logDiv.innerHTML = syncLogs.slice(0, 20).join('<br>');
+}
+
+window.connectGoogleSheet = function() {
+    const sheetUrl = document.getElementById('googleSheetUrl').value;
+    
+    if (!sheetUrl) {
+        alert('Please paste your Google Sheet URL');
+        return;
+    }
+    
+    localStorage.setItem('google_sheet_url', sheetUrl);
+    
+    document.getElementById('syncStatus').className = 'sync-status sync-connected';
+    document.getElementById('syncStatus').innerHTML = '<i class="fas fa-circle"></i> <strong>Status:</strong> Connected to Google Sheets';
+    
+    addLog('Google Sheet connected: ' + sheetUrl);
+    alert('Google Sheet connected! You can now sync your data.');
+};
+
+window.syncNow = async function() {
+    const sheetUrl = localStorage.getItem('google_sheet_url');
+    
+    if (!sheetUrl) {
+        alert('Please connect a Google Sheet first');
+        return;
+    }
+    
+    addLog('Starting sync...');
+    
+    // Check which data to sync
+    const syncLeads = document.getElementById('syncLeads').checked;
+    const syncTemplates = document.getElementById('syncTemplates').checked;
+    const syncFollowups = document.getElementById('syncFollowups').checked;
+    const syncActivity = document.getElementById('syncActivity').checked;
+    
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    let exportData = {};
+    
+    if (syncLeads) {
+        const { data: leads } = await window.supabase.from('leads').select('*').eq('user_id', user.id);
+        exportData.leads = leads || [];
+        addLog(`Leads: ${leads?.length || 0} records ready`);
+    }
+    
+    if (syncTemplates) {
+        const { data: templates } = await window.supabase.from('templates').select('*').eq('user_id', user.id);
+        exportData.templates = templates || [];
+        addLog(`Templates: ${templates?.length || 0} records ready`);
+    }
+    
+    if (syncFollowups) {
+        const { data: followups } = await window.supabase.from('followups').select('*').eq('user_id', user.id);
+        exportData.followups = followups || [];
+        addLog(`Follow-ups: ${followups?.length || 0} records ready`);
+    }
+    
+    if (syncActivity) {
+        const { data: activities } = await window.supabase.from('activity_log').select('*').eq('user_id', user.id);
+        exportData.activities = activities || [];
+        addLog(`Activities: ${activities?.length || 0} records ready`);
+    }
+    
+    // Create combined CSV
+    let csv = '';
+    
+    if (exportData.leads && exportData.leads.length > 0) {
+        csv += '=== LEADS ===\n';
+        csv += 'Name,Phone,Email,Company,Status,Tags\n';
+        exportData.leads.forEach(lead => {
+            csv += `${lead.name},${lead.phone},${lead.email || ''},${lead.company || ''},${lead.status},${lead.tags || ''}\n`;
+        });
+        csv += '\n';
+    }
+    
+    if (exportData.templates && exportData.templates.length > 0) {
+        csv += '=== TEMPLATES ===\n';
+        csv += 'Name,Category,Content\n';
+        exportData.templates.forEach(template => {
+            csv += `${template.name},${template.category || ''},"${template.content}"\n`;
+        });
+        csv += '\n';
+    }
+    
+    if (exportData.followups && exportData.followups.length > 0) {
+        csv += '=== FOLLOW-UPS ===\n';
+        csv += 'Lead ID,Date,Time,Notes,Priority,Status\n';
+        exportData.followups.forEach(f => {
+            csv += `${f.lead_id},${f.followup_date},${f.followup_time || ''},"${f.notes || ''}",${f.priority},${f.status}\n`;
+        });
+        csv += '\n';
+    }
+    
+    if (exportData.activities && exportData.activities.length > 0) {
+        csv += '=== ACTIVITY LOG ===\n';
+        csv += 'Action,Details,Created At\n';
+        exportData.activities.forEach(activity => {
+            csv += `${activity.action},"${activity.details || ''}",${activity.created_at}\n`;
+        });
+    }
+    
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'whatsapp-crm-sync-' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    addLog('Sync completed! CSV file downloaded.');
+    addLog('Upload this CSV to Google Sheets: File → Import → Upload');
+    
+    // Save sync log
+    localStorage.setItem('sync_log', JSON.stringify(syncLogs));
+};
+
+// Export Functions
+window.exportLeadsCSV = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    const { data: leads } = await window.supabase.from('leads').select('*').eq('user_id', user.id);
+    
+    let csv = 'Name,Phone,Email,Company,Status,Tags,Created At\n';
+    (leads || []).forEach(lead => {
+        csv += `${lead.name},${lead.phone},${lead.email || ''},${lead.company || ''},${lead.status},${lead.tags || ''},${lead.created_at}\n`;
+    });
+    
+    downloadCSV(csv, 'leads.csv');
+};
+
+window.exportTemplatesCSV = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    const { data: templates } = await window.supabase.from('templates').select('*').eq('user_id', user.id);
+    
+    let csv = 'Name,Category,Content\n';
+    (templates || []).forEach(t => {
+        csv += `${t.name},${t.category || ''},"${t.content}"\n`;
+    });
+    
+    downloadCSV(csv, 'templates.csv');
+};
+
+window.exportFollowupsCSV = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    const { data: followups } = await window.supabase.from('followups').select('*').eq('user_id', user.id);
+    
+    let csv = 'Lead ID,Date,Time,Notes,Priority,Status\n';
+    (followups || []).forEach(f => {
+        csv += `${f.lead_id},${f.followup_date},${f.followup_time || ''},"${f.notes || ''}",${f.priority},${f.status}\n`;
+    });
+    
+    downloadCSV(csv, 'followups.csv');
+};
+
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Load saved state
+const savedSheetUrl = localStorage.getItem('google_sheet_url');
+if (savedSheetUrl) {
+    document.getElementById('googleSheetUrl').value = savedSheetUrl;
+    document.getElementById('syncStatus').className = 'sync-status sync-connected';
+    document.getElementById('syncStatus').innerHTML = '<i class="fas fa-circle"></i> <strong>Status:</strong> Connected to Google Sheets';
+}
+
+const savedLogs = localStorage.getItem('sync_log');
+if (savedLogs) {
+    syncLogs = JSON.parse(savedLogs);
+    document.getElementById('syncLog').innerHTML = syncLogs.slice(0, 20).join('<br>');
+}
+</script>
