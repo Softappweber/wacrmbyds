@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation Help Guide - WhatsApp CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .help-header {
+            background: linear-gradient(135deg, #0f0f1e, #1a1a2e);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .help-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .help-header p {
+            opacity: 0.8;
+            font-size: 16px;
+        }
+        .help-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        .help-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .help-section h2 {
+            font-size: 20px;
+            color: #1a1a2e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-section h2 i {
+            color: #25D366;
+        }
+        .help-section p {
+            color: #555;
+            margin-bottom: 12px;
+        }
+        .help-section ul {
+            padding-left: 20px;
+        }
+        .help-section li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        .example-box {
+            background-color: #f0fff4;
+            border-left: 4px solid #25D366;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .example-box strong {
+            color: #128C7E;
+        }
+        .step-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background-color: #25D366;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .tip-box {
+            background-color: #fff3e0;
+            border-left: 4px solid #f57c00;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .tip-box strong {
+            color: #f57c00;
+        }
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+<a href="javascript:window.close()" class="btn btn-light back-btn">
+    <i class="fas fa-times"></i> Close
+</a>
+
+<div class="help-header">
+    <i class="fab fa-whatsapp" style="font-size: 40px; color: #25D366;"></i>
+    <h1>Automation Help Guide</h1>
+    <p>Learn how to automate your WhatsApp marketing</p>
+</div>
+
+<div class="help-container">
+
+    <!-- What is Automation -->
+    <div class="help-section">
+        <h2><i class="fas fa-robot"></i> What is Automation?</h2>
+        <p>
+            Automation means your CRM works for you automatically without you doing anything manually. 
+            Instead of typing and sending messages one by one, you create rules once, and the system follows them.
+        </p>
+        <div class="example-box">
+            <strong>Example:</strong> When a new lead is added, an automated welcome message is sent to them instantly — without you clicking anything.
+        </div>
+    </div>
+
+    <!-- Auto-Responders -->
+    <div class="help-section">
+        <h2><i class="fas fa-reply"></i> What are Auto-Responders?</h2>
+        <p>
+            Auto-responders are automatic replies sent when something specific happens.
+        </p>
+        <ul>
+            <li>When a new lead is added → auto-send a greeting</li>
+            <li>When lead status changes → auto-send a follow-up message</li>
+        </ul>
+        <div class="example-box">
+            <strong>Real-life example:</strong> A customer fills a form on your website. 
+            They get added to your CRM. Instantly, they receive: <em>"Hi {name}! Thanks for your interest. We'll contact you soon."</em>
+        </div>
+    </div>
+
+    <!-- Scheduled Messages -->
+    <div class="help-section">
+        <h2><i class="fas fa-clock"></i> What are Scheduled Messages?</h2>
+        <p>
+            Scheduled messages are messages that go out at a specific date and time you choose.
+        </p>
+        <ul>
+            <li>Send a message tomorrow at 10 AM</li>
+            <li>Send a promotional message on a festival day</li>
+            <li>Send a reminder before an event</li>
+        </ul>
+        <div class="example-box">
+            <strong>Real-life example:</strong> You schedule a message for Monday 9 AM: 
+            <em>"Good morning! Our new offer starts today. Reply YES for details."</em>
+        </div>
+    </div>
+
+    <!-- Drip Campaigns -->
+    <div class="help-section">
+        <h2><i class="fas fa-tint"></i> What are Drip Campaigns?</h2>
+        <p>
+            A drip campaign is a series of messages sent automatically one after another with time gaps.
+        </p>
+        <ul>
+            <li>Message 1: Sent immediately</li>
+            <li>Message 2: Sent after 24 hours</li>
+            <li>Message 3: Sent after 48 hours</li>
+        </ul>
+        <div class="example-box">
+            <strong>Real-life example:</strong> 
+            Day 1: "Welcome to our service!"<br>
+            Day 2: "Did you check our features?"<br>
+            Day 3: "Here's a special offer for you."
+        </div>
+    </div>
+
+    <!-- Welcome Messages -->
+    <div class="help-section">
+        <h2><i class="fas fa-handshake"></i> What are Welcome Messages?</h2>
+        <p>
+            Welcome messages are the first message a new lead receives when they enter your CRM.
+        </p>
+        <ul>
+            <li>Make a good first impression</li>
+            <li>Introduce your business</li>
+            <li>Tell them what to expect</li>
+        </ul>
+        <div class="example-box">
+            <strong>Real-life example:</strong> "Welcome to ABC Company! We're excited to have you. 
+            Our team will contact you within 24 hours."
+        </div>
+    </div>
+
+    <!-- Active Automation Rules -->
+    <div class="help-section">
+        <h2><i class="fas fa-list-check"></i> What are Active Automation Rules?</h2>
+        <p>
+            Active Automation Rules are the rules you have created that are currently turned ON.
+        </p>
+        <ul>
+            <li><strong>Active (Green):</strong> Rule is working and will trigger automatically</li>
+            <li><strong>Inactive (Gray):</strong> Rule is saved but turned OFF, won't trigger</li>
+        </ul>
+        <p>You can turn rules ON/OFF anytime using the toggle switch.</p>
+    </div>
+
+    <!-- How to Create Automation Rules -->
+    <div class="help-section">
+        <h2><i class="fas fa-plus-circle"></i> How to Create Automation Rules</h2>
+        
+        <div class="step-box">
+            <p><span class="step-number">1</span><strong>Click "Create Automation Rule"</strong></p>
+            <p>Found at the bottom of the Automation page.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">2</span><strong>Enter Rule Name</strong></p>
+            <p>Give your rule a name you'll remember. Example: "Welcome New Customers"</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">3</span><strong>Choose Automation Type</strong></p>
+            <p>Pick one: Auto-Responder, Scheduled Message, Drip Campaign, or Welcome Message.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">4</span><strong>Choose Trigger</strong></p>
+            <p>When should this rule run?</p>
+            <ul>
+                <li><strong>New lead added:</strong> When someone is added to your CRM</li>
+                <li><strong>Status changes:</strong> When a lead's status changes</li>
+                <li><strong>Specific time:</strong> At a date/time you choose</li>
+                <li><strong>Manual:</strong> You trigger it yourself</li>
+            </ul>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">5</span><strong>Select Template</strong></p>
+            <p>Choose a message template you've already created in the Templates page.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">6</span><strong>Set Delay</strong></p>
+            <p>How many seconds after the trigger should the message send? (0 = instantly)</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">7</span><strong>Set Active to Yes</strong></p>
+            <p>Make sure it's set to "Yes" so the rule starts working.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">8</span><strong>Click "Save Rule"</strong></p>
+            <p>Your automation rule is now active!</p>
+        </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="help-section">
+        <h2><i class="fas fa-lightbulb"></i> Quick Tips</h2>
+        <div class="tip-box">
+            <strong>Tip 1:</strong> Always test your automation with your own number first.
+        </div>
+        <div class="tip-box">
+            <strong>Tip 2:</strong> Use {name} in templates to personalize messages automatically.
+        </div>
+        <div class="tip-box">
+            <strong>Tip 3:</strong> Start with a Welcome Message rule — it's the easiest.
+        </div>
+        <div class="tip-box">
+            <strong>Tip 4:</strong> Don't create too many rules at once. Add one, test it, then add more.
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
