@@ -268,12 +268,23 @@ window.addLead = async function() {
     }]);
     
     if (error) { alert(error.message); } else {
-        $('#addLeadModal').modal('hide');
+        // Hide modal manually
+        document.getElementById('addLeadModal').classList.remove('show');
+        document.getElementById('addLeadModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+        document.querySelector('.modal-backdrop')?.remove();
+        
+        // Clear form
+        document.getElementById('leadName').value = '';
+        document.getElementById('leadPhone').value = '';
+        document.getElementById('leadEmail').value = '';
+        document.getElementById('leadCompany').value = '';
         selectedAddTags.clear();
+        document.querySelectorAll('#addLeadTags .tag-checkbox-item').forEach(el => el.classList.remove('checked'));
+        
         loadLeads();
     }
 };
-
 window.editLead = async function(id) {
     const { data: lead } = await window.supabase.from('leads').select('*').eq('id', id).single();
     if (lead) {
