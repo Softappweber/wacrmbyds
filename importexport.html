@@ -1,0 +1,401 @@
+<style>
+    .export-card {
+        border: 2px dashed #e0e0e0;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .export-card:hover {
+        border-color: #25D366;
+        background-color: #f8f9fa;
+    }
+    .export-icon {
+        font-size: 48px;
+        color: #25D366;
+        margin-bottom: 15px;
+    }
+    .export-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .export-desc {
+        color: #666;
+        font-size: 14px;
+    }
+</style>
+
+<h3 class="mb-4"><i class="fas fa-exchange-alt"></i> Import & Export</h3>
+
+<!-- Export Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h5 class="mb-3">Export Data</h5>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="export-card" onclick="exportLeads()">
+            <div class="export-icon"><i class="fas fa-users"></i></div>
+            <div class="export-title">Export Leads</div>
+            <div class="export-desc">Download all leads as CSV</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="export-card" onclick="exportTemplates()">
+            <div class="export-icon"><i class="fas fa-envelope-open-text"></i></div>
+            <div class="export-title">Export Templates</div>
+            <div class="export-desc">Download all templates as CSV</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="export-card" onclick="exportFollowups()">
+            <div class="export-icon"><i class="fas fa-clock"></i></div>
+            <div class="export-title">Export Follow-ups</div>
+            <div class="export-desc">Download all follow-ups as CSV</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="export-card" onclick="exportActivityLog()">
+            <div class="export-icon"><i class="fas fa-history"></i></div>
+            <div class="export-title">Export Activity Log</div>
+            <div class="export-desc">Download activity history as CSV</div>
+        </div>
+    </div>
+</div>
+
+<!-- Backup Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h5 class="mb-3">Backup & Restore</h5>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="export-card" onclick="downloadFullBackup()">
+            <div class="export-icon"><i class="fas fa-download"></i></div>
+            <div class="export-title">Download Full Backup</div>
+            <div class="export-desc">Download all data as JSON file</div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="export-card" onclick="document.getElementById('restoreFile').click()">
+            <div class="export-icon"><i class="fas fa-upload"></i></div>
+            <div class="export-title">Restore Backup</div>
+            <div class="export-desc">Restore data from JSON backup file</div>
+            <input type="file" id="restoreFile" accept=".json" style="display:none;" onchange="restoreBackup(event)">
+        </div>
+    </div>
+</div>
+
+<!-- Import Section -->
+<div class="row">
+    <div class="col-12">
+        <h5 class="mb-3">Import Data</h5>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Import Leads (CSV)</h5></div>
+            <div class="card-body">
+                <p class="text-muted">CSV format: Name, Phone, Email, Company, Status, Tags</p>
+                <input type="file" id="importLeadsFile" accept=".csv" class="form-control mb-3" onchange="importLeadsFromCSV(event)">
+                <button class="btn btn-primary" onclick="document.getElementById('importLeadsFile').click()">
+                    <i class="fas fa-upload"></i> Choose CSV File
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Import Templates (CSV)</h5></div>
+            <div class="card-body">
+                <p class="text-muted">CSV format: Name, Category, Content</p>
+                <input type="file" id="importTemplatesFile" accept=".csv" class="form-control mb-3" onchange="importTemplatesFromCSV(event)">
+                <button class="btn btn-primary" onclick="document.getElementById('importTemplatesFile').click()">
+                    <i class="fas fa-upload"></i> Choose CSV File
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Export Functions
+window.exportLeads = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    if (!leads || leads.length === 0) {
+        alert('No leads to export');
+        return;
+    }
+    
+    let csv = 'Name,Phone,Email,Company,Status,Tags,Created At\n';
+    
+    leads.forEach(lead => {
+        csv += `${lead.name},${lead.phone},${lead.email || ''},${lead.company || ''},${lead.status},${lead.tags || ''},${lead.created_at}\n`;
+    });
+    
+    downloadCSV(csv, 'leads.csv');
+};
+
+window.exportTemplates = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: templates } = await window.supabase
+        .from('templates')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    if (!templates || templates.length === 0) {
+        alert('No templates to export');
+        return;
+    }
+    
+    let csv = 'Name,Category,Content,Created At\n';
+    
+    templates.forEach(template => {
+        csv += `${template.name},${template.category || ''},"${template.content}",${template.created_at}\n`;
+    });
+    
+    downloadCSV(csv, 'templates.csv');
+};
+
+window.exportFollowups = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: followups } = await window.supabase
+        .from('followups')
+        .select('*, leads(name)')
+        .eq('user_id', user.id);
+    
+    if (!followups || followups.length === 0) {
+        alert('No follow-ups to export');
+        return;
+    }
+    
+    let csv = 'Lead Name,Date,Time,Notes,Priority,Status\n';
+    
+    followups.forEach(f => {
+        csv += `${f.leads?.name || ''},${f.followup_date},${f.followup_time || ''},"${f.notes || ''}",${f.priority},${f.status}\n`;
+    });
+    
+    downloadCSV(csv, 'followups.csv');
+};
+
+window.exportActivityLog = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: activities } = await window.supabase
+        .from('activity_log')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    if (!activities || activities.length === 0) {
+        alert('No activities to export');
+        return;
+    }
+    
+    let csv = 'Action,Details,Created At\n';
+    
+    activities.forEach(activity => {
+        csv += `${activity.action},"${activity.details || ''}",${activity.created_at}\n`;
+    });
+    
+    downloadCSV(csv, 'activity_log.csv');
+};
+
+// Download Full Backup
+window.downloadFullBackup = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const [leadsResult, templatesResult, followupsResult, activitiesResult] = await Promise.all([
+        window.supabase.from('leads').select('*').eq('user_id', user.id),
+        window.supabase.from('templates').select('*').eq('user_id', user.id),
+        window.supabase.from('followups').select('*').eq('user_id', user.id),
+        window.supabase.from('activity_log').select('*').eq('user_id', user.id)
+    ]);
+    
+    const backup = {
+        exported_at: new Date().toISOString(),
+        data: {
+            leads: leadsResult.data || [],
+            templates: templatesResult.data || [],
+            followups: followupsResult.data || [],
+            activity_log: activitiesResult.data || []
+        }
+    };
+    
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'whatsapp-crm-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+// Restore Backup
+window.restoreBackup = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        try {
+            const backup = JSON.parse(e.target.result);
+            const { data: { user } } = await window.supabase.auth.getUser();
+            
+            if (!user) return;
+            
+            if (confirm('This will restore data from backup. Existing data will remain. Continue?')) {
+                
+                // Restore leads
+                if (backup.data.leads && backup.data.leads.length > 0) {
+                    for (const lead of backup.data.leads) {
+                        await window.supabase.from('leads').insert([{
+                            user_id: user.id,
+                            name: lead.name,
+                            phone: lead.phone,
+                            email: lead.email,
+                            company: lead.company,
+                            status: lead.status,
+                            tags: lead.tags
+                        }]);
+                    }
+                }
+                
+                // Restore templates
+                if (backup.data.templates && backup.data.templates.length > 0) {
+                    for (const template of backup.data.templates) {
+                        await window.supabase.from('templates').insert([{
+                            user_id: user.id,
+                            name: template.name,
+                            category: template.category,
+                            content: template.content
+                        }]);
+                    }
+                }
+                
+                // Restore followups
+                if (backup.data.followups && backup.data.followups.length > 0) {
+                    for (const followup of backup.data.followups) {
+                        await window.supabase.from('followups').insert([{
+                            user_id: user.id,
+                            lead_id: followup.lead_id,
+                            followup_date: followup.followup_date,
+                            followup_time: followup.followup_time,
+                            notes: followup.notes,
+                            priority: followup.priority,
+                            status: followup.status
+                        }]);
+                    }
+                }
+                
+                alert('Backup restored successfully!');
+            }
+        } catch (error) {
+            alert('Failed to restore backup: ' + error.message);
+        }
+    };
+    
+    reader.readAsText(file);
+};
+
+// Import Functions
+window.importLeadsFromCSV = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        const lines = e.target.result.split('\n');
+        const { data: { user } } = await window.supabase.auth.getUser();
+        
+        let imported = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            
+            const v = lines[i].split(',');
+            
+            await window.supabase.from('leads').insert([{
+                user_id: user.id,
+                name: v[0]?.trim() || '',
+                phone: v[1]?.trim() || '',
+                email: v[2]?.trim() || '',
+                company: v[3]?.trim() || '',
+                status: v[4]?.trim() || 'New',
+                tags: v[5]?.trim() || ''
+            }]);
+            
+            imported++;
+        }
+        
+        alert(imported + ' leads imported successfully!');
+    };
+    
+    reader.readAsText(file);
+};
+
+window.importTemplatesFromCSV = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        const lines = e.target.result.split('\n');
+        const { data: { user } } = await window.supabase.auth.getUser();
+        
+        let imported = 0;
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            
+            const v = lines[i].split(',');
+            
+            await window.supabase.from('templates').insert([{
+                user_id: user.id,
+                name: v[0]?.trim() || '',
+                category: v[1]?.trim() || '',
+                content: v[2]?.trim() || ''
+            }]);
+            
+            imported++;
+        }
+        
+        alert(imported + ' templates imported successfully!');
+    };
+    
+    reader.readAsText(file);
+};
+
+// Helper: Download CSV
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
