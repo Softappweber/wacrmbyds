@@ -1,0 +1,342 @@
+<style>
+    .chat-container {
+        display: flex;
+        gap: 20px;
+        min-height: 500px;
+    }
+    .lead-list-panel {
+        width: 300px;
+        flex-shrink: 0;
+    }
+    .lead-list {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .lead-item {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-radius: 5px;
+    }
+    .lead-item:hover {
+        background-color: #f8f9fa;
+    }
+    .lead-item.active {
+        background-color: #e8f5e9;
+        border-left: 3px solid #25D366;
+    }
+    .chat-panel {
+        flex: 1;
+    }
+    .chat-timeline {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 20px;
+    }
+    .chat-message {
+        margin-bottom: 15px;
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-message.sent {
+        align-items: flex-end;
+    }
+    .chat-message.received {
+        align-items: flex-start;
+    }
+    .chat-message.note {
+        align-items: center;
+    }
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 15px;
+        border-radius: 15px;
+        position: relative;
+    }
+    .sent .message-bubble {
+        background-color: #dcf8c6;
+        border-bottom-right-radius: 5px;
+    }
+    .received .message-bubble {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-bottom-left-radius: 5px;
+    }
+    .note .message-bubble {
+        background-color: #fff3e0;
+        border: 1px dashed #f57c00;
+        max-width: 90%;
+        text-align: center;
+    }
+    .message-time {
+        font-size: 10px;
+        color: #999;
+        margin-top: 3px;
+    }
+    .message-status {
+        font-size: 11px;
+        margin-top: 3px;
+    }
+    .status-sent { color: #999; }
+    .status-delivered { color: #1976d2; }
+    .status-read { color: #25D366; }
+    .chat-input-area {
+        display: flex;
+        gap: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-comments"></i> Chat History</h3>
+    <a href="chat-history-help.html" target="_blank" class="btn btn-outline-primary">
+        <i class="fas fa-question-circle"></i> Help
+    </a>
+</div>
+
+<div class="chat-container">
+    <!-- Lead List -->
+    <div class="lead-list-panel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Select Lead</h5>
+            </div>
+            <div class="card-body p-0">
+                <input type="text" id="chatLeadSearch" class="form-control mb-2" placeholder="Search leads..." onkeyup="filterChatLeads()">
+                <div class="lead-list" id="chatLeadsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0" id="chatLeadName">Select a lead to view history</h5>
+            </div>
+            <div class="card-body">
+                <div class="chat-timeline" id="chatTimeline">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-comments fa-3x mb-3"></i>
+                        <p>Select a lead to see conversation history</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <!-- Add Note -->
+                <div class="chat-input-area">
+                    <input type="text" id="chatNoteInput" class="form-control" placeholder="Add a note (e.g., Called customer, said call back tomorrow)">
+                    <button class="btn btn-primary" onclick="addNote()">
+                        <i class="fas fa-plus"></i> Add Note
+                    </button>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-success btn-sm" onclick="sendWhatsAppToLead()">
+                        <i class="fab fa-whatsapp"></i> Send WhatsApp
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshChat()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let chatLeads = [];
+let selectedLeadId = null;
+let allChatHistory = [];
+
+async function loadChatLeads() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+    
+    chatLeads = leads || [];
+    displayChatLeads(chatLeads);
+}
+
+function displayChatLeads(leads) {
+    if (leads.length === 0) {
+        document.getElementById('chatLeadsList').innerHTML = '<p class="text-muted text-center p-3">No leads</p>';
+        return;
+    }
+    
+    document.getElementById('chatLeadsList').innerHTML = leads.map(lead => `
+        <div class="lead-item ${selectedLeadId === lead.id ? 'active' : ''}" onclick="selectLeadForChat(${lead.id})">
+            <strong>${lead.name}</strong>
+            <br><small class="text-muted">${lead.phone}</small>
+            ${lead.status ? `<br><span class="badge bg-secondary" style="font-size: 10px;">${lead.status}</span>` : ''}
+        </div>
+    `).join('');
+}
+
+window.filterChatLeads = function() {
+    const search = document.getElementById('chatLeadSearch').value.toLowerCase();
+    const filtered = chatLeads.filter(lead => 
+        lead.name.toLowerCase().includes(search) || 
+        lead.phone.includes(search)
+    );
+    displayChatLeads(filtered);
+};
+
+window.selectLeadForChat = async function(leadId) {
+    selectedLeadId = leadId;
+    displayChatLeads(chatLeads);
+    
+    const lead = chatLeads.find(l => l.id === leadId);
+    if (!lead) return;
+    
+    document.getElementById('chatLeadName').textContent = lead.name + ' - ' + lead.phone;
+    
+    await loadChatHistory(leadId);
+};
+
+async function loadChatHistory(leadId) {
+    const { data: history } = await window.supabase
+        .from('chat_history')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: true });
+    
+    allChatHistory = history || [];
+    displayChatHistory(allChatHistory);
+}
+
+function displayChatHistory(history) {
+    const timeline = document.getElementById('chatTimeline');
+    
+    if (history.length === 0) {
+        timeline.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-comments fa-3x mb-3"></i>
+                <p>No conversation history yet</p>
+                <p class="small">Send a WhatsApp message or add a note to start tracking</p>
+            </div>
+        `;
+        return;
+    }
+    
+    timeline.innerHTML = history.map(chat => {
+        let messageClass = 'sent';
+        let bubbleText = chat.message;
+        let statusHtml = '';
+        
+        if (chat.direction === 'received') {
+            messageClass = 'received';
+            bubbleText = chat.message;
+            statusHtml = `<div class="message-status status-read"><i class="fas fa-check-double"></i> Received</div>`;
+        } else if (chat.direction === 'note') {
+            messageClass = 'note';
+            bubbleText = chat.message;
+            statusHtml = `<div class="message-status"><i class="fas fa-sticky-note"></i> Note</div>`;
+        } else {
+            // Sent message
+            messageClass = 'sent';
+            bubbleText = chat.message;
+            
+            if (chat.status === 'read') {
+                statusHtml = `<div class="message-status status-read"><i class="fas fa-check-double"></i> Read</div>`;
+            } else if (chat.status === 'delivered') {
+                statusHtml = `<div class="message-status status-delivered"><i class="fas fa-check-double"></i> Delivered</div>`;
+            } else {
+                statusHtml = `<div class="message-status status-sent"><i class="fas fa-check"></i> Sent</div>`;
+            }
+        }
+        
+        return `
+            <div class="chat-message ${messageClass}">
+                <div class="message-bubble">
+                    ${bubbleText}
+                </div>
+                <div class="message-time">
+                    ${new Date(chat.created_at).toLocaleString()}
+                </div>
+                ${statusHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+window.addNote = async function() {
+    const noteText = document.getElementById('chatNoteInput').value.trim();
+    
+    if (!noteText) {
+        alert('Please enter a note');
+        return;
+    }
+    
+    if (!selectedLeadId) {
+        alert('Please select a lead first');
+        return;
+    }
+    
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { error } = await window.supabase.from('chat_history').insert([{
+        user_id: user.id,
+        lead_id: selectedLeadId,
+        message: noteText,
+        direction: 'note',
+        status: 'note'
+    }]);
+    
+    if (error) {
+        alert('Failed to add note: ' + error.message);
+    } else {
+        document.getElementById('chatNoteInput').value = '';
+        await loadChatHistory(selectedLeadId);
+    }
+};
+
+window.sendWhatsAppToLead = function() {
+    if (!selectedLeadId) {
+        alert('Please select a lead first');
+        return;
+    }
+    
+    const lead = chatLeads.find(l => l.id === selectedLeadId);
+    if (!lead) return;
+    
+    const cleanPhone = lead.phone.replace(/[^0-9]/g, '');
+    window.open(`https://wa.me/${cleanPhone}`, '_blank');
+    
+    // Log this as sent message
+    (async () => {
+        const { data: { user } } = await window.supabase.auth.getUser();
+        if (!user) return;
+        
+        await window.supabase.from('chat_history').insert([{
+            user_id: user.id,
+            lead_id: selectedLeadId,
+            message: '[WhatsApp opened - message sent manually]',
+            direction: 'sent',
+            status: 'sent'
+        }]);
+        
+        await loadChatHistory(selectedLeadId);
+    })();
+};
+
+window.refreshChat = function() {
+    if (selectedLeadId) {
+        loadChatHistory(selectedLeadId);
+    }
+};
+
+// Initialize
+loadChatLeads();
+</script>
