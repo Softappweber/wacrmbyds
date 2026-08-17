@@ -1,0 +1,408 @@
+<style>
+    .automation-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #25D366;
+    }
+    .automation-rule {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 3px solid #25D366;
+    }
+    .automation-rule.active {
+        border-left-color: #388e3c;
+        background-color: #f0fff4;
+    }
+    .automation-rule.inactive {
+        border-left-color: #999;
+        opacity: 0.6;
+    }
+    .rule-badge {
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 11px;
+    }
+    .badge-autoresponder { background-color: #e3f2fd; color: #1976d2; }
+    .badge-scheduled { background-color: #fff3e0; color: #f57c00; }
+    .badge-drip { background-color: #f3e5f5; color: #7b1fa2; }
+    .badge-welcome { background-color: #e8f5e9; color: #388e3c; }
+    .toggle-switch {
+        position: relative;
+        width: 45px;
+        height: 22px;
+        cursor: pointer;
+    }
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .toggle-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        border-radius: 22px;
+        transition: 0.3s;
+    }
+    .toggle-slider:before {
+        content: '';
+        position: absolute;
+        height: 16px;
+        width: 16px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: #25D366;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(23px);
+    }
+    .drip-step {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        border-left: 3px solid #7b1fa2;
+    }
+</style>
+
+<h3 class="mb-4"><i class="fas fa-robot"></i> Automation</h3>
+
+<!-- Automation Types -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center p-3" style="cursor:pointer;" onclick="showAutomationType('autoresponder')">
+            <i class="fas fa-reply fa-2x text-primary mb-2"></i>
+            <h6>Auto-Responders</h6>
+            <small class="text-muted">Auto-reply to new leads</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3" style="cursor:pointer;" onclick="showAutomationType('scheduled')">
+            <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+            <h6>Scheduled Messages</h6>
+            <small class="text-muted">Send at specific times</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3" style="cursor:pointer;" onclick="showAutomationType('drip')">
+            <i class="fas fa-tint fa-2x text-success mb-2"></i>
+            <h6>Drip Campaigns</h6>
+            <small class="text-muted">Sequence of messages</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3" style="cursor:pointer;" onclick="showAutomationType('welcome')">
+            <i class="fas fa-handshake fa-2x text-info mb-2"></i>
+            <h6>Welcome Messages</h6>
+            <small class="text-muted">Greet new leads instantly</small>
+        </div>
+    </div>
+</div>
+
+<!-- Automation Rules List -->
+<div id="automationRules">
+    <h5 class="mb-3">Active Automation Rules</h5>
+    <div id="rulesList"></div>
+</div>
+
+<!-- Add Rule Button -->
+<button class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#addAutomationModal">
+    <i class="fas fa-plus"></i> Create Automation Rule
+</button>
+
+<!-- Add Automation Modal -->
+<div class="modal fade" id="addAutomationModal"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5>Create Automation Rule</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Rule Name *</label>
+                    <input type="text" id="ruleName" class="form-control" placeholder="e.g., Welcome New Leads">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Automation Type *</label>
+                    <select id="ruleType" class="form-select" onchange="toggleRuleFields()">
+                        <option value="autoresponder">Auto-Responder</option>
+                        <option value="scheduled">Scheduled Message</option>
+                        <option value="drip">Drip Campaign</option>
+                        <option value="welcome">Welcome Message</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Trigger *</label>
+                    <select id="ruleTrigger" class="form-select">
+                        <option value="new_lead">When new lead is added</option>
+                        <option value="lead_status_change">When lead status changes</option>
+                        <option value="specific_time">At specific time</option>
+                        <option value="manual">Manual trigger</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="statusField" style="display:none;">
+                    <label class="form-label">When status changes to</label>
+                    <select id="triggerStatus" class="form-select">
+                        <option>New</option>
+                        <option>Contacted</option>
+                        <option>Interested</option>
+                        <option>Converted</option>
+                        <option>Lost</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="scheduleField" style="display:none;">
+                    <label class="form-label">Schedule Time</label>
+                    <input type="datetime-local" id="scheduleTime" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Select Template *</label>
+                    <select id="ruleTemplate" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Message Preview</label>
+                    <textarea id="ruleMessagePreview" class="form-control" rows="4" readonly></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Delay (seconds after trigger)</label>
+                    <input type="number" id="ruleDelay" class="form-control" value="0" min="0">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Active</label>
+                    <select id="ruleActive" class="form-select">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Drip Campaign Steps -->
+        <div id="dripStepsSection" style="display:none;">
+            <hr>
+            <h6>Drip Campaign Steps</h6>
+            <div id="dripSteps"></div>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addDripStep()">
+                <i class="fas fa-plus"></i> Add Step
+            </button>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAutomationRule()">Save Rule</button>
+    </div>
+</div></div></div>
+
+<script>
+let allTemplates = [];
+let dripStepCount = 0;
+
+async function loadTemplatesForAutomation() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: templates } = await window.supabase
+        .from('templates')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    allTemplates = templates || [];
+    
+    const select = document.getElementById('ruleTemplate');
+    select.innerHTML = '<option value="">Select Template</option>' + 
+        allTemplates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    
+    select.onchange = function() {
+        const template = allTemplates.find(t => t.id == this.value);
+        if (template) {
+            document.getElementById('ruleMessagePreview').value = template.content;
+        } else {
+            document.getElementById('ruleMessagePreview').value = '';
+        }
+    };
+}
+
+function showAutomationType(type) {
+    document.getElementById('ruleType').value = type;
+    toggleRuleFields();
+    $('#addAutomationModal').modal('show');
+}
+
+function toggleRuleFields() {
+    const type = document.getElementById('ruleType').value;
+    const statusField = document.getElementById('statusField');
+    const scheduleField = document.getElementById('scheduleField');
+    const dripSection = document.getElementById('dripStepsSection');
+    
+    statusField.style.display = 'none';
+    scheduleField.style.display = 'none';
+    dripSection.style.display = 'none';
+    
+    if (type === 'autoresponder' || type === 'welcome') {
+        document.getElementById('ruleTrigger').value = 'new_lead';
+    } else if (type === 'scheduled') {
+        scheduleField.style.display = 'block';
+        document.getElementById('ruleTrigger').value = 'specific_time';
+    } else if (type === 'drip') {
+        dripSection.style.display = 'block';
+        document.getElementById('ruleTrigger').value = 'new_lead';
+    }
+}
+
+function addDripStep() {
+    dripStepCount++;
+    const dripDiv = document.getElementById('dripSteps');
+    
+    const stepHtml = `
+        <div class="drip-step" id="dripStep${dripStepCount}">
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">Step ${dripStepCount} - Template</label>
+                    <select class="form-select drip-template" data-step="${dripStepCount}">
+                        <option value="">Select Template</option>
+                        ${allTemplates.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Delay (hours)</label>
+                    <input type="number" class="form-control drip-delay" value="24" min="1">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-sm btn-danger" onclick="removeDripStep(${dripStepCount})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    dripDiv.insertAdjacentHTML('beforeend', stepHtml);
+}
+
+function removeDripStep(stepId) {
+    document.getElementById('dripStep' + stepId).remove();
+}
+
+async function loadAutomationRules() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: rules } = await window.supabase
+        .from('automation_rules')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+    
+    if (rules && rules.length > 0) {
+        document.getElementById('rulesList').innerHTML = rules.map(rule => `
+            <div class="automation-rule ${rule.active ? 'active' : 'inactive'}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${rule.name}</strong>
+                        <span class="rule-badge badge-${rule.type} ms-2">${rule.type}</span>
+                        <br>
+                        <small class="text-muted">
+                            Trigger: ${rule.trigger_type} | Delay: ${rule.delay_seconds}s
+                        </small>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${rule.active ? 'checked' : ''} onchange="toggleRule(${rule.id}, this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <button class="btn btn-sm btn-danger" onclick="deleteRule(${rule.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        document.getElementById('rulesList').innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No automation rules yet. Create your first rule!</p>
+            </div>
+        `;
+    }
+}
+
+window.saveAutomationRule = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const ruleName = document.getElementById('ruleName').value;
+    const ruleType = document.getElementById('ruleType').value;
+    const ruleTrigger = document.getElementById('ruleTrigger').value;
+    const templateId = document.getElementById('ruleTemplate').value;
+    const delay = document.getElementById('ruleDelay').value;
+    const active = document.getElementById('ruleActive').value === 'true';
+    
+    if (!ruleName || !templateId) {
+        alert('Please enter rule name and select template');
+        return;
+    }
+    
+    const ruleData = {
+        user_id: user.id,
+        name: ruleName,
+        type: ruleType,
+        trigger_type: ruleTrigger,
+        template_id: parseInt(templateId),
+        delay_seconds: parseInt(delay),
+        active: active
+    };
+    
+    // Add drip steps if applicable
+    if (ruleType === 'drip') {
+        const steps = [];
+        document.querySelectorAll('.drip-step').forEach(step => {
+            const stepTemplate = step.querySelector('.drip-template').value;
+            const stepDelay = step.querySelector('.drip-delay').value;
+            if (stepTemplate) {
+                steps.push({
+                    template_id: parseInt(stepTemplate),
+                    delay_hours: parseInt(stepDelay)
+                });
+            }
+        });
+        ruleData.drip_steps = JSON.stringify(steps);
+    }
+    
+    const { error } = await window.supabase.from('automation_rules').insert([ruleData]);
+    
+    if (error) {
+        alert('Failed to save rule: ' + error.message);
+    } else {
+        $('#addAutomationModal').modal('hide');
+        loadAutomationRules();
+    }
+};
+
+window.toggleRule = async function(id, active) {
+    await window.supabase.from('automation_rules').update({ active: active }).eq('id', id);
+    loadAutomationRules();
+};
+
+window.deleteRule = async function(id) {
+    if (confirm('Delete this automation rule?')) {
+        await window.supabase.from('automation_rules').delete().eq('id', id);
+        loadAutomationRules();
+    }
+};
+
+// Initialize
+loadTemplatesForAutomation();
+loadAutomationRules();
+</script>
