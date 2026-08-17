@@ -1,0 +1,140 @@
+<style>
+    .email-config-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .email-template-card {
+        border-left: 3px solid #1976d2;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-envelope"></i> Email Integration</h3>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> 
+    Send emails alongside WhatsApp messages. Perfect for formal communication.
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">Email Configuration</h5></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Your Email</label>
+                    <input type="email" id="senderEmail" class="form-control" placeholder="your@email.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email Service</label>
+                    <select id="emailService" class="form-select">
+                        <option value="">Select Service</option>
+                        <option value="gmail">Gmail</option>
+                        <option value="outlook">Outlook</option>
+                        <option value="smtp">Custom SMTP</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="saveEmailConfig()">
+                    <i class="fas fa-save"></i> Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">Send Email</h5></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Lead</label>
+                    <select id="emailLeadSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Subject</label>
+                    <input type="text" id="emailSubject" class="form-control" placeholder="Email subject...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Message</label>
+                    <textarea id="emailBody" class="form-control" rows="5" placeholder="Write your email..."></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="sendEmail()">
+                    <i class="fas fa-paper-plane"></i> Send Email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">Email Templates</h5></div>
+    <div class="card-body">
+        <p class="text-muted">Create email templates for common responses.</p>
+        <button class="btn btn-outline-primary" onclick="alert('Email templates coming soon! Use WhatsApp templates for now.')">
+            <i class="fas fa-plus"></i> Add Email Template
+        </button>
+    </div>
+</div>
+
+<script>
+async function loadLeadsForEmail() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('id, name, email')
+        .eq('user_id', user.id)
+        .order('name');
+    
+    const select = document.getElementById('emailLeadSelect');
+    select.innerHTML = '<option value="">Select Lead</option>' + 
+        (leads || []).filter(l => l.email).map(lead => `<option value="${lead.id}">${lead.name} - ${lead.email}</option>`).join('');
+}
+
+window.saveEmailConfig = function() {
+    const email = document.getElementById('senderEmail').value;
+    const service = document.getElementById('emailService').value;
+    
+    if (!email || !service) {
+        alert('Please enter email and select service');
+        return;
+    }
+    
+    localStorage.setItem('email_config', JSON.stringify({ email, service }));
+    alert('Email configuration saved!');
+};
+
+window.sendEmail = function() {
+    const leadId = document.getElementById('emailLeadSelect').value;
+    const subject = document.getElementById('emailSubject').value;
+    const body = document.getElementById('emailBody').value;
+    
+    if (!leadId || !subject || !body) {
+        alert('Please fill all fields');
+        return;
+    }
+    
+    (async () => {
+        const { data: lead } = await window.supabase
+            .from('leads')
+            .select('email')
+            .eq('id', leadId)
+            .single();
+        
+        if (lead && lead.email) {
+            const mailtoLink = `mailto:${lead.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoLink;
+            alert('Email client opened!');
+        }
+    })();
+};
+
+loadLeadsForEmail();
+</script>
