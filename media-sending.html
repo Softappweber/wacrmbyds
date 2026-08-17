@@ -1,0 +1,155 @@
+<style>
+    .media-upload-area {
+        border: 2px dashed #e0e0e0;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .media-upload-area:hover {
+        border-color: #25D366;
+        background: #f0fff4;
+    }
+    .media-preview {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 8px;
+        margin: 10px auto;
+    }
+    .media-card {
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: #f8f9fa;
+    }
+    .media-icon {
+        font-size: 30px;
+        color: #25D366;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-image"></i> Media Sending</h3>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Upload Media</h5></div>
+            <div class="card-body">
+                <div class="media-upload-area" onclick="document.getElementById('mediaFile').click()">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <h6>Click to upload image or video</h6>
+                    <p class="text-muted">Supported: JPG, PNG, GIF, MP4</p>
+                    <input type="file" id="mediaFile" accept="image/*,video/*" style="display:none;" onchange="previewMedia(event)">
+                </div>
+                <div id="mediaPreviewContainer" style="display:none;">
+                    <img id="mediaPreview" class="media-preview">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Send Media</h5></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Lead</label>
+                    <select id="mediaLeadSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Caption (optional)</label>
+                    <textarea id="mediaCaption" class="form-control" rows="3" placeholder="Add a caption to your media..."></textarea>
+                </div>
+                <button class="btn btn-primary w-100" onclick="sendMediaViaWhatsApp()">
+                    <i class="fab fa-whatsapp"></i> Send Media
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header"><h5 class="mb-0">Media Library</h5></div>
+    <div class="card-body" id="mediaLibrary">
+        <p class="text-muted">No media uploaded yet</p>
+    </div>
+</div>
+
+<script>
+let selectedMediaFile = null;
+
+async function loadLeadsForMedia() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('id, name, phone')
+        .eq('user_id', user.id)
+        .order('name');
+    
+    const select = document.getElementById('mediaLeadSelect');
+    select.innerHTML = '<option value="">Select Lead</option>' + 
+        (leads || []).map(lead => `<option value="${lead.id}">${lead.name} - ${lead.phone}</option>`).join('');
+}
+
+window.previewMedia = function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        selectedMediaFile = file;
+        
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('mediaPreviewContainer').style.display = 'block';
+                document.getElementById('mediaPreview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else if (file.type.startsWith('video/')) {
+            document.getElementById('mediaPreviewContainer').style.display = 'block';
+            document.getElementById('mediaPreview').src = URL.createObjectURL(file);
+        }
+    }
+};
+
+window.sendMediaViaWhatsApp = function() {
+    const leadId = document.getElementById('mediaLeadSelect').value;
+    const caption = document.getElementById('mediaCaption').value;
+    
+    if (!leadId) {
+        alert('Please select a lead');
+        return;
+    }
+    
+    if (!selectedMediaFile) {
+        alert('Please upload a media file first');
+        return;
+    }
+    
+    alert('Media sending via WhatsApp Web is not directly supported.\n\n' +
+          'Please use WhatsApp Web to send media manually.\n\n' +
+          'Tip: You can drag and drop your media file into WhatsApp Web chat.');
+    
+    // Open WhatsApp for the selected lead
+    (async () => {
+        const { data: lead } = await window.supabase
+            .from('leads')
+            .select('phone')
+            .eq('id', leadId)
+            .single();
+        
+        if (lead) {
+            const cleanPhone = lead.phone.replace(/[^0-9]/g, '');
+            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(caption || '')}`, '_blank');
+        }
+    })();
+};
+
+loadLeadsForMedia();
+</script>
