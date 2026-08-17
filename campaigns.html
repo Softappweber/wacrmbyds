@@ -1,0 +1,564 @@
+<style>
+    .campaign-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #25D366;
+        transition: all 0.3s;
+    }
+    .campaign-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .campaign-active {
+        border-left-color: #388e3c;
+        background-color: #f0fff4;
+    }
+    .campaign-paused {
+        border-left-color: #f57c00;
+        background-color: #fff8f0;
+    }
+    .campaign-completed {
+        border-left-color: #1976d2;
+        background-color: #f0f4ff;
+    }
+    .campaign-draft {
+        border-left-color: #999;
+        background-color: #f8f9fa;
+    }
+    .campaign-stats {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        min-width: 80px;
+    }
+    .stat-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .stat-label {
+        font-size: 11px;
+        color: #666;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .badge-active { background-color: #e8f5e9; color: #388e3c; }
+    .badge-paused { background-color: #fff3e0; color: #f57c00; }
+    .badge-completed { background-color: #e3f2fd; color: #1976d2; }
+    .badge-draft { background-color: #f5f5f5; color: #999; }
+    .campaign-progress {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e0e0e0;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    .campaign-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #25D366, #128C7E);
+        border-radius: 4px;
+        transition: width 0.3s;
+    }
+    .assign-lead-item {
+        padding: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    .assign-lead-item:hover {
+        background-color: #f8f9fa;
+    }
+    .assign-lead-item.selected {
+        background-color: #e8f5e9;
+        border-left: 3px solid #25D366;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-bullhorn"></i> Campaigns</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCampaignModal">
+        <i class="fas fa-plus"></i> Create Campaign
+    </button>
+</div>
+
+<!-- Campaign Stats Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="totalCampaigns">0</h4>
+            <small class="text-muted">Total Campaigns</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="activeCampaigns">0</h4>
+            <small class="text-muted">Active</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="completedCampaigns">0</h4>
+            <small class="text-muted">Completed</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h4 id="totalCampaignLeads">0</h4>
+            <small class="text-muted">Total Leads Assigned</small>
+        </div>
+    </div>
+</div>
+
+<!-- Campaigns List -->
+<div id="campaignsList"></div>
+
+<!-- Add Campaign Modal -->
+<div class="modal fade" id="addCampaignModal"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5>Create Campaign</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Campaign Name *</label>
+                    <input type="text" id="campaignName" class="form-control" placeholder="e.g., Diwali Promotion 2025">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea id="campaignDescription" class="form-control" rows="3" placeholder="What is this campaign about?"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Goal</label>
+                    <input type="text" id="campaignGoal" class="form-control" placeholder="e.g., Get 50 new customers">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" id="campaignStartDate" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" id="campaignEndDate" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select id="campaignStatus" class="form-select">
+                        <option value="Active">Active</option>
+                        <option value="Draft">Draft</option>
+                        <option value="Paused">Paused</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Select Template</label>
+                    <select id="campaignTemplate" class="form-select">
+                        <option value="">No template</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="createCampaign()">Create Campaign</button>
+    </div>
+</div></div></div>
+
+<!-- Assign Leads Modal -->
+<div class="modal fade" id="assignLeadsModal"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5>Assign Leads to Campaign</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" id="assignCampaignId">
+        <p>Campaign: <strong id="assignCampaignName"></strong></p>
+        <input type="text" id="assignLeadSearch" class="form-control mb-3" placeholder="Search leads..." onkeyup="filterAssignableLeads()">
+        <div class="d-flex justify-content-between mb-3">
+            <button class="btn btn-sm btn-outline-primary" onclick="selectAllAssignableLeads()">Select All</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="deselectAllAssignableLeads()">Deselect All</button>
+        </div>
+        <div id="assignableLeadsList" style="max-height: 400px; overflow-y: auto;"></div>
+        <div class="mt-3">
+            <strong>Selected: <span id="selectedAssignableCount">0</span> leads</strong>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="assignLeadsToCampaign()">Assign</button>
+    </div>
+</div></div></div>
+
+<!-- View Campaign Leads Modal -->
+<div class="modal fade" id="viewCampaignLeadsModal"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5>Campaign Leads</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div id="campaignLeadsList"></div>
+    </div>
+</div></div></div>
+
+<script>
+let allCampaigns = [];
+let allLeadsForCampaign = [];
+let assignedLeads = new Set();
+let currentCampaignForAssign = null;
+
+async function loadTemplatesForCampaign() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: templates } = await window.supabase
+        .from('templates')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    const select = document.getElementById('campaignTemplate');
+    select.innerHTML = '<option value="">No template</option>' + 
+        (templates || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+}
+
+async function loadCampaigns() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const [campaignsResult, leadsResult, campaignLeadsResult] = await Promise.all([
+        window.supabase.from('campaigns').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        window.supabase.from('leads').select('*').eq('user_id', user.id),
+        window.supabase.from('campaign_leads').select('*').eq('user_id', user.id)
+    ]);
+    
+    allCampaigns = campaignsResult.data || [];
+    allLeadsForCampaign = leadsResult.data || [];
+    
+    // Calculate stats
+    const total = allCampaigns.length;
+    const active = allCampaigns.filter(c => c.status === 'Active').length;
+    const completed = allCampaigns.filter(c => c.status === 'Completed').length;
+    const totalAssigned = campaignLeadsResult.data?.length || 0;
+    
+    document.getElementById('totalCampaigns').textContent = total;
+    document.getElementById('activeCampaigns').textContent = active;
+    document.getElementById('completedCampaigns').textContent = completed;
+    document.getElementById('totalCampaignLeads').textContent = totalAssigned;
+    
+    displayCampaigns();
+}
+
+function displayCampaigns() {
+    if (allCampaigns.length === 0) {
+        document.getElementById('campaignsList').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-bullhorn fa-3x text-muted mb-3"></i>
+                <h5>No campaigns yet</h5>
+                <p class="text-muted">Create your first campaign to start marketing</p>
+            </div>
+        `;
+        return;
+    }
+    
+    document.getElementById('campaignsList').innerHTML = allCampaigns.map(campaign => {
+        const statusClass = campaign.status === 'Active' ? 'campaign-active' : 
+                           campaign.status === 'Paused' ? 'campaign-paused' : 
+                           campaign.status === 'Completed' ? 'campaign-completed' : 'campaign-draft';
+        
+        const badgeClass = campaign.status === 'Active' ? 'badge-active' : 
+                          campaign.status === 'Paused' ? 'badge-paused' : 
+                          campaign.status === 'Completed' ? 'badge-completed' : 'badge-draft';
+        
+        const leadCount = campaign.lead_count || 0;
+        const targetLeads = campaign.target_leads || 0;
+        const progress = targetLeads > 0 ? (leadCount / targetLeads) * 100 : 0;
+        
+        return `
+            <div class="campaign-card ${statusClass}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">${campaign.name}</h5>
+                        ${campaign.description ? `<p class="text-muted mb-2">${campaign.description}</p>` : ''}
+                        <span class="status-badge ${badgeClass}">${campaign.status}</span>
+                        ${campaign.goal ? `<span class="ms-2"><i class="fas fa-bullseye"></i> ${campaign.goal}</span>` : ''}
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-primary" onclick="openAssignModal(${campaign.id})" title="Assign Leads">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="viewCampaignLeads(${campaign.id})" title="View Leads">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="sendCampaignMessage(${campaign.id})" title="Send Message">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCampaign(${campaign.id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="campaign-stats mt-3">
+                    <div class="stat-item">
+                        <div class="stat-value">${leadCount}</div>
+                        <div class="stat-label">Leads</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${campaign.messages_sent || 0}</div>
+                        <div class="stat-label">Messages</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${campaign.responses || 0}</div>
+                        <div class="stat-label">Responses</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${campaign.conversions || 0}</div>
+                        <div class="stat-label">Conversions</div>
+                    </div>
+                </div>
+                
+                ${targetLeads > 0 ? `
+                    <div class="campaign-progress">
+                        <div class="campaign-progress-bar" style="width: ${Math.min(progress, 100)}%"></div>
+                    </div>
+                    <small class="text-muted">${leadCount} / ${targetLeads} leads (${Math.round(progress)}%)</small>
+                ` : ''}
+                
+                ${campaign.start_date ? `
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-calendar"></i> ${campaign.start_date} ${campaign.end_date ? 'to ' + campaign.end_date : ''}
+                    </small>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+window.createCampaign = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const campaignData = {
+        user_id: user.id,
+        name: document.getElementById('campaignName').value,
+        description: document.getElementById('campaignDescription').value,
+        goal: document.getElementById('campaignGoal').value,
+        start_date: document.getElementById('campaignStartDate').value || null,
+        end_date: document.getElementById('campaignEndDate').value || null,
+        status: document.getElementById('campaignStatus').value,
+        template_id: document.getElementById('campaignTemplate').value ? parseInt(document.getElementById('campaignTemplate').value) : null
+    };
+    
+    if (!campaignData.name) {
+        alert('Please enter campaign name');
+        return;
+    }
+    
+    const { error } = await window.supabase.from('campaigns').insert([campaignData]);
+    
+    if (error) {
+        alert('Failed to create campaign: ' + error.message);
+    } else {
+        $('#addCampaignModal').modal('hide');
+        loadCampaigns();
+    }
+};
+
+window.openAssignModal = async function(campaignId) {
+    const campaign = allCampaigns.find(c => c.id === campaignId);
+    if (!campaign) return;
+    
+    currentCampaignForAssign = campaignId;
+    assignedLeads.clear();
+    
+    document.getElementById('assignCampaignId').value = campaignId;
+    document.getElementById('assignCampaignName').textContent = campaign.name;
+    document.getElementById('assignLeadSearch').value = '';
+    
+    // Load already assigned leads
+    const { data: existing } = await window.supabase
+        .from('campaign_leads')
+        .select('lead_id')
+        .eq('campaign_id', campaignId);
+    
+    if (existing) {
+        existing.forEach(e => assignedLeads.add(e.lead_id));
+    }
+    
+    displayAssignableLeads(allLeadsForCampaign);
+    $('#assignLeadsModal').modal('show');
+};
+
+function displayAssignableLeads(leads) {
+    if (leads.length === 0) {
+        document.getElementById('assignableLeadsList').innerHTML = '<p class="text-muted">No leads found</p>';
+        return;
+    }
+    
+    document.getElementById('assignableLeadsList').innerHTML = leads.map(lead => `
+        <div class="assign-lead-item ${assignedLeads.has(lead.id) ? 'selected' : ''}" id="assignLead${lead.id}" onclick="toggleAssignableLead(${lead.id})">
+            <input type="checkbox" ${assignedLeads.has(lead.id) ? 'checked' : ''} onchange="toggleAssignableLead(${lead.id})">
+            <strong>${lead.name}</strong> - ${lead.phone}
+            ${lead.company ? `<small class="text-muted">(${lead.company})</small>` : ''}
+        </div>
+    `).join('');
+    
+    document.getElementById('selectedAssignableCount').textContent = assignedLeads.size;
+}
+
+window.toggleAssignableLead = function(leadId) {
+    if (assignedLeads.has(leadId)) {
+        assignedLeads.delete(leadId);
+    } else {
+        assignedLeads.add(leadId);
+    }
+    document.getElementById('assignLead' + leadId).classList.toggle('selected');
+    document.getElementById('selectedAssignableCount').textContent = assignedLeads.size;
+};
+
+window.selectAllAssignableLeads = function() {
+    allLeadsForCampaign.forEach(lead => assignedLeads.add(lead.id));
+    displayAssignableLeads(allLeadsForCampaign);
+};
+
+window.deselectAllAssignableLeads = function() {
+    assignedLeads.clear();
+    displayAssignableLeads(allLeadsForCampaign);
+};
+
+window.filterAssignableLeads = function() {
+    const search = document.getElementById('assignLeadSearch').value.toLowerCase();
+    const filtered = allLeadsForCampaign.filter(lead => 
+        lead.name.toLowerCase().includes(search) || 
+        lead.phone.includes(search) ||
+        (lead.company && lead.company.toLowerCase().includes(search))
+    );
+    displayAssignableLeads(filtered);
+};
+
+window.assignLeadsToCampaign = async function() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const campaignId = currentCampaignForAssign;
+    
+    // Remove existing assignments
+    await window.supabase.from('campaign_leads').delete().eq('campaign_id', campaignId);
+    
+    // Add new assignments
+    for (const leadId of assignedLeads) {
+        await window.supabase.from('campaign_leads').insert([{
+            user_id: user.id,
+            campaign_id: campaignId,
+            lead_id: leadId
+        }]);
+    }
+    
+    // Update lead count
+    await window.supabase.from('campaigns').update({
+        lead_count: assignedLeads.size
+    }).eq('id', campaignId);
+    
+    $('#assignLeadsModal').modal('hide');
+    alert('Leads assigned successfully!');
+    loadCampaigns();
+};
+
+window.viewCampaignLeads = async function(campaignId) {
+    const { data: campaignLeads } = await window.supabase
+        .from('campaign_leads')
+        .select('lead_id')
+        .eq('campaign_id', campaignId);
+    
+    const leadIds = campaignLeads?.map(cl => cl.lead_id) || [];
+    const leads = allLeadsForCampaign.filter(l => leadIds.includes(l.id));
+    
+    if (leads.length === 0) {
+        document.getElementById('campaignLeadsList').innerHTML = '<p class="text-muted">No leads assigned to this campaign</p>';
+    } else {
+        document.getElementById('campaignLeadsList').innerHTML = `
+            <table class="table table-striped">
+                <thead><tr><th>Name</th><th>Phone</th><th>Company</th><th>Status</th></tr></thead>
+                <tbody>
+                    ${leads.map(lead => `
+                        <tr>
+                            <td>${lead.name}</td>
+                            <td>${lead.phone}</td>
+                            <td>${lead.company || '-'}</td>
+                            <td>${lead.status}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+    
+    $('#viewCampaignLeadsModal').modal('show');
+};
+
+window.sendCampaignMessage = async function(campaignId) {
+    const campaign = allCampaigns.find(c => c.id === campaignId);
+    if (!campaign) return;
+    
+    // Get leads for this campaign
+    const { data: campaignLeads } = await window.supabase
+        .from('campaign_leads')
+        .select('lead_id')
+        .eq('campaign_id', campaignId);
+    
+    const leadIds = campaignLeads?.map(cl => cl.lead_id) || [];
+    const leads = allLeadsForCampaign.filter(l => leadIds.includes(l.id));
+    
+    if (leads.length === 0) {
+        alert('No leads assigned to this campaign. Assign leads first.');
+        return;
+    }
+    
+    // Get template if assigned
+    let templateContent = '';
+    if (campaign.template_id) {
+        const { data: template } = await window.supabase
+            .from('templates')
+            .select('*')
+            .eq('id', campaign.template_id)
+            .single();
+        if (template) templateContent = template.content;
+    }
+    
+    // Open WhatsApp for each lead
+    for (const lead of leads) {
+        let message = templateContent || `Hi ${lead.name},`;
+        message = message.replace(/{name}/g, lead.name).replace(/{company}/g, lead.company || '');
+        
+        const cleanPhone = lead.phone.replace(/[^0-9]/g, '');
+        const encodedMessage = encodeURIComponent(message);
+        window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    // Update message count
+    await window.supabase.from('campaigns').update({
+        messages_sent: (campaign.messages_sent || 0) + leads.length
+    }).eq('id', campaignId);
+    
+    alert('Campaign messages opened for ' + leads.length + ' leads!');
+    loadCampaigns();
+};
+
+window.deleteCampaign = async function(id) {
+    if (confirm('Delete this campaign? This will also remove lead assignments.')) {
+        await window.supabase.from('campaign_leads').delete().eq('campaign_id', id);
+        await window.supabase.from('campaigns').delete().eq('id', id);
+        loadCampaigns();
+    }
+};
+
+// Initialize
+loadTemplatesForCampaign();
+loadCampaigns();
+</script>
