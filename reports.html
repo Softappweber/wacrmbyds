@@ -1,0 +1,319 @@
+<style>
+    .report-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #25D366;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .report-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .report-icon {
+        font-size: 30px;
+        margin-bottom: 10px;
+    }
+    .report-period-btn {
+        margin: 0 5px;
+    }
+    .report-period-btn.active {
+        background-color: #25D366;
+        color: white;
+    }
+    .summary-stat {
+        text-align: center;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+    }
+    .summary-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .summary-label {
+        font-size: 12px;
+        color: #666;
+    }
+    .report-table {
+        font-size: 13px;
+    }
+    .report-section {
+        margin-bottom: 30px;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-file-alt"></i> Reports</h3>
+    <div>
+        <button class="btn btn-outline-primary" onclick="printReport()">
+            <i class="fas fa-print"></i> Print
+        </button>
+        <button class="btn btn-primary" onclick="exportReportPDF()">
+            <i class="fas fa-download"></i> Export PDF
+        </button>
+    </div>
+</div>
+
+<!-- Period Selector -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-center flex-wrap">
+            <button class="btn btn-sm report-period-btn active" onclick="changePeriod('today', this)">Today</button>
+            <button class="btn btn-sm report-period-btn" onclick="changePeriod('yesterday', this)">Yesterday</button>
+            <button class="btn btn-sm report-period-btn" onclick="changePeriod('week', this)">Last 7 Days</button>
+            <button class="btn btn-sm report-period-btn" onclick="changePeriod('month', this)">Last 30 Days</button>
+            <button class="btn btn-sm report-period-btn" onclick="changePeriod('quarter', this)">Last 90 Days</button>
+            <button class="btn btn-sm report-period-btn" onclick="changePeriod('all', this)">All Time</button>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4" id="summaryStats"></div>
+
+<!-- Report Content -->
+<div id="reportContent"></div>
+
+<script>
+let currentPeriod = 'today';
+
+function getDateRange(period) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let startDate = today;
+    
+    switch(period) {
+        case 'today':
+            startDate = today;
+            break;
+        case 'yesterday':
+            startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 1);
+            break;
+        case 'week':
+            startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 7);
+            break;
+        case 'month':
+            startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 30);
+            break;
+        case 'quarter':
+            startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 90);
+            break;
+        case 'all':
+            startDate = new Date(2000, 0, 1);
+            break;
+    }
+    
+    return startDate;
+}
+
+window.changePeriod = function(period, button) {
+    currentPeriod = period;
+    
+    document.querySelectorAll('.report-period-btn').forEach(b => b.classList.remove('active'));
+    button.classList.add('active');
+    
+    loadReport();
+};
+
+async function loadReport() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const startDate = getDateRange(currentPeriod);
+    const startDateStr = startDate.toISOString();
+    
+    const [leadsResult, templatesResult, followupsResult, activitiesResult, campaignsResult] = await Promise.all([
+        window.supabase.from('leads').select('*').eq('user_id', user.id),
+        window.supabase.from('templates').select('*').eq('user_id', user.id),
+        window.supabase.from('followups').select('*').eq('user_id', user.id),
+        window.supabase.from('activity_log').select('*').eq('user_id', user.id),
+        window.supabase.from('campaigns').select('*').eq('user_id', user.id)
+    ]);
+    
+    const allLeads = leadsResult.data || [];
+    const allTemplates = templatesResult.data || [];
+    const allFollowups = followupsResult.data || [];
+    const allActivities = activitiesResult.data || [];
+    const allCampaigns = campaignsResult.data || [];
+    
+    // Filter by date
+    const leads = allLeads.filter(l => new Date(l.created_at) >= startDate);
+    const followups = allFollowups.filter(f => new Date(f.followup_date) >= startDate);
+    const activities = allActivities.filter(a => new Date(a.created_at) >= startDate);
+    
+    // Calculate stats
+    const totalLeads = leads.length;
+    const convertedLeads = leads.filter(l => l.status === 'Converted').length;
+    const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0;
+    const messagesSent = activities.filter(a => a.action.includes('WhatsApp') || a.action.includes('Bulk')).length;
+    const followupsDone = followups.filter(f => f.status === 'Done').length;
+    const followupsPending = followups.filter(f => f.status === 'Pending').length;
+    
+    // Display summary
+    document.getElementById('summaryStats').innerHTML = `
+        <div class="col-md-2">
+            <div class="summary-stat">
+                <div class="summary-value">${totalLeads}</div>
+                <div class="summary-label">New Leads</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="summary-stat">
+                <div class="summary-value">${convertedLeads}</div>
+                <div class="summary-label">Converted</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="summary-stat">
+                <div class="summary-value">${conversionRate}%</div>
+                <div class="summary-label">Conversion Rate</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="summary-stat">
+                <div class="summary-value">${messagesSent}</div>
+                <div class="summary-label">Messages Sent</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="summary-stat">
+                <div class="summary-value">${followupsDone}</div>
+                <div class="summary-label">Follow-ups Done</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="summary-stat">
+                <div class="summary-value">${followupsPending}</div>
+                <div class="summary-label">Follow-ups Pending</div>
+            </div>
+        </div>
+    `;
+    
+    // Build report content
+    let reportHtml = '';
+    
+    // Lead Status Report
+    const statusCounts = {};
+    leads.forEach(lead => {
+        statusCounts[lead.status] = (statusCounts[lead.status] || 0) + 1;
+    });
+    
+    reportHtml += `
+        <div class="report-section">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Lead Status Report</h5></div>
+                <div class="card-body">
+                    <table class="table report-table">
+                        <thead><tr><th>Status</th><th>Count</th><th>Percentage</th></tr></thead>
+                        <tbody>
+                            ${Object.entries(statusCounts).map(([status, count]) => `
+                                <tr>
+                                    <td>${status}</td>
+                                    <td>${count}</td>
+                                    <td>${totalLeads > 0 ? ((count / totalLeads) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Activity Report
+    reportHtml += `
+        <div class="report-section">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Activity Report</h5></div>
+                <div class="card-body">
+                    <table class="table report-table">
+                        <thead><tr><th>Date</th><th>Action</th><th>Details</th></tr></thead>
+                        <tbody>
+                            ${activities.slice(0, 20).map(activity => `
+                                <tr>
+                                    <td>${new Date(activity.created_at).toLocaleString()}</td>
+                                    <td>${activity.action}</td>
+                                    <td>${activity.details || '-'}</td>
+                                </tr>
+                            `).join('')}
+                            ${activities.length === 0 ? '<tr><td colspan="3" class="text-center">No activities</td></tr>' : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Campaign Report
+    reportHtml += `
+        <div class="report-section">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Campaign Report</h5></div>
+                <div class="card-body">
+                    <table class="table report-table">
+                        <thead><tr><th>Campaign</th><th>Status</th><th>Leads</th><th>Messages</th><th>Responses</th><th>Conversions</th></tr></thead>
+                        <tbody>
+                            ${allCampaigns.map(campaign => `
+                                <tr>
+                                    <td>${campaign.name}</td>
+                                    <td>${campaign.status}</td>
+                                    <td>${campaign.lead_count || 0}</td>
+                                    <td>${campaign.messages_sent || 0}</td>
+                                    <td>${campaign.responses || 0}</td>
+                                    <td>${campaign.conversions || 0}</td>
+                                </tr>
+                            `).join('')}
+                            ${allCampaigns.length === 0 ? '<tr><td colspan="6" class="text-center">No campaigns</td></tr>' : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Follow-up Report
+    reportHtml += `
+        <div class="report-section">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Follow-up Report</h5></div>
+                <div class="card-body">
+                    <table class="table report-table">
+                        <thead><tr><th>Date</th><th>Lead</th><th>Priority</th><th>Status</th></tr></thead>
+                        <tbody>
+                            ${followups.slice(0, 20).map(followup => `
+                                <tr>
+                                    <td>${followup.followup_date}</td>
+                                    <td>${followup.lead_id || '-'}</td>
+                                    <td>${followup.priority}</td>
+                                    <td>${followup.status}</td>
+                                </tr>
+                            `).join('')}
+                            ${followups.length === 0 ? '<tr><td colspan="4" class="text-center">No follow-ups</td></tr>' : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('reportContent').innerHTML = reportHtml;
+}
+
+window.printReport = function() {
+    window.print();
+};
+
+window.exportReportPDF = function() {
+    alert('PDF export will be available in the next update. For now, use Print and choose "Save as PDF".');
+};
+
+// Initialize
+loadReport();
+</script>
