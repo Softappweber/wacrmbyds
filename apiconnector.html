@@ -1,0 +1,365 @@
+<style>
+    .connector-status {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .status-connected {
+        background-color: #e8f5e9;
+        border: 1px solid #388e3c;
+        color: #388e3c;
+    }
+    .status-disconnected {
+        background-color: #fff3e0;
+        border: 1px solid #f57c00;
+        color: #f57c00;
+    }
+    .api-config-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .send-method-card {
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        height: 100%;
+    }
+    .send-method-card:hover {
+        border-color: #25D366;
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
+    }
+    .send-method-card.active {
+        border-color: #25D366;
+        background-color: #f0fff4;
+    }
+    .send-method-icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+    }
+    .message-status-badge {
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+    }
+    .status-sent { background-color: #e3f2fd; color: #1976d2; }
+    .status-delivered { background-color: #e8f5e9; color: #388e3c; }
+    .status-read { background-color: #c8e6c9; color: #1b5e20; }
+    .status-failed { background-color: #ffebee; color: #d32f2f; }
+</style>
+
+<h3 class="mb-4"><i class="fas fa-plug"></i> WhatsApp API Connector</h3>
+
+<!-- Connection Status -->
+<div id="connectionStatus" class="connector-status status-disconnected">
+    <i class="fas fa-circle"></i> 
+    <strong>Status:</strong> Not Connected to Meta WhatsApp API
+</div>
+
+<!-- Send Method Selection -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="send-method-card active" id="waMeCard" onclick="selectMethod('wame')">
+            <div class="send-method-icon">🔗</div>
+            <h5>wa.me Links (Manual)</h5>
+            <p class="text-muted">Free, opens WhatsApp Web, you click send manually</p>
+            <span class="badge bg-secondary">No Setup Required</span>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="send-method-card" id="metaApiCard" onclick="selectMethod('meta')">
+            <div class="send-method-icon">🤖</div>
+            <h5>Meta WhatsApp API (Automated)</h5>
+            <p class="text-muted">Official API, automated sending, delivery reports</p>
+            <span class="badge bg-success">Free Tier Available</span>
+        </div>
+    </div>
+</div>
+
+<!-- Meta API Configuration -->
+<div class="api-config-card" id="metaApiConfig" style="display:none;">
+    <h5 class="mb-3"><i class="fab fa-meta"></i> Meta WhatsApp API Configuration</h5>
+    
+    <div class="alert alert-info">
+        <strong>How to get these credentials:</strong>
+        <ol class="mb-0 mt-2">
+            <li>Go to <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a></li>
+            <li>Create a Meta App</li>
+            <li>Add WhatsApp product to your app</li>
+            <li>Get your Phone Number ID and Access Token</li>
+            <li>Get your WhatsApp Business Account ID</li>
+        </ol>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Phone Number ID *</label>
+        <input type="text" id="phoneNumberId" class="form-control" placeholder="e.g., 123456789012345">
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">WhatsApp Business Account ID *</label>
+        <input type="text" id="businessAccountId" class="form-control" placeholder="e.g., 987654321098765">
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Access Token *</label>
+        <input type="password" id="accessToken" class="form-control" placeholder="Paste your permanent access token">
+        <small class="text-muted">Token is stored locally only, never sent to our servers</small>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">API Version</label>
+        <select id="apiVersion" class="form-select">
+            <option value="v17.0">v17.0</option>
+            <option value="v18.0">v18.0</option>
+            <option value="v19.0">v19.0</option>
+            <option value="v20.0">v20.0</option>
+        </select>
+    </div>
+    
+    <button class="btn btn-success" onclick="saveMetaConfig()">
+        <i class="fas fa-save"></i> Save Configuration
+    </button>
+    <button class="btn btn-outline-primary" onclick="testConnection()">
+        <i class="fas fa-plug"></i> Test Connection
+    </button>
+</div>
+
+<!-- Test Message Section -->
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Send Test Message</h5></div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" id="testPhoneNumber" class="form-control mb-3" placeholder="919876543210">
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Message</label>
+                <textarea id="testMessageContent" class="form-control mb-3" rows="3" placeholder="Hello! This is a test message from WhatsApp CRM."></textarea>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="sendTestMessage()">
+            <i class="fab fa-whatsapp"></i> Send Test Message
+        </button>
+    </div>
+</div>
+
+<!-- Message Templates -->
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Message Templates (For Meta API)</h5></div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <strong>Important:</strong> For automated messages, Meta requires pre-approved templates. 
+            Create templates in Meta Business Manager first, then sync them here.
+        </div>
+        <div id="metaTemplatesList">
+            <p class="text-muted">No synced templates. Create templates in Meta Business Manager.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Message Log -->
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">Recent API Messages</h5></div>
+    <div class="card-body">
+        <div id="apiMessageLog">
+            <p class="text-muted">No messages sent via API yet.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedMethod = 'wame';
+let metaConfig = null;
+
+// Load saved config
+function loadMetaConfig() {
+    const saved = localStorage.getItem('meta_whatsapp_config');
+    if (saved) {
+        metaConfig = JSON.parse(saved);
+        document.getElementById('phoneNumberId').value = metaConfig.phoneNumberId || '';
+        document.getElementById('businessAccountId').value = metaConfig.businessAccountId || '';
+        document.getElementById('accessToken').value = metaConfig.accessToken || '';
+        document.getElementById('apiVersion').value = metaConfig.apiVersion || 'v17.0';
+        
+        if (metaConfig.phoneNumberId && metaConfig.accessToken) {
+            updateConnectionStatus(true);
+        }
+    }
+}
+
+window.selectMethod = function(method) {
+    selectedMethod = method;
+    
+    document.getElementById('waMeCard').classList.remove('active');
+    document.getElementById('metaApiCard').classList.remove('active');
+    
+    if (method === 'wame') {
+        document.getElementById('waMeCard').classList.add('active');
+        document.getElementById('metaApiConfig').style.display = 'none';
+    } else {
+        document.getElementById('metaApiCard').classList.add('active');
+        document.getElementById('metaApiConfig').style.display = 'block';
+    }
+    
+    localStorage.setItem('selected_send_method', method);
+};
+
+window.saveMetaConfig = function() {
+    const config = {
+        phoneNumberId: document.getElementById('phoneNumberId').value,
+        businessAccountId: document.getElementById('businessAccountId').value,
+        accessToken: document.getElementById('accessToken').value,
+        apiVersion: document.getElementById('apiVersion').value
+    };
+    
+    if (!config.phoneNumberId || !config.accessToken) {
+        alert('Please enter Phone Number ID and Access Token');
+        return;
+    }
+    
+    metaConfig = config;
+    localStorage.setItem('meta_whatsapp_config', JSON.stringify(config));
+    
+    updateConnectionStatus(true);
+    alert('Configuration saved!');
+};
+
+window.testConnection = async function() {
+    if (!metaConfig) {
+        alert('Please save configuration first');
+        return;
+    }
+    
+    const url = `https://graph.facebook.com/${metaConfig.apiVersion}/${metaConfig.phoneNumberId}`;
+    
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${metaConfig.accessToken}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            alert('Connection failed: ' + data.error.message);
+            updateConnectionStatus(false);
+        } else {
+            alert('Connection successful! Phone Number verified.');
+            updateConnectionStatus(true);
+        }
+    } catch (error) {
+        alert('Connection failed: ' + error.message);
+        updateConnectionStatus(false);
+    }
+};
+
+window.sendTestMessage = async function() {
+    const phone = document.getElementById('testPhoneNumber').value;
+    const message = document.getElementById('testMessageContent').value;
+    
+    if (!phone || !message) {
+        alert('Please enter phone number and message');
+        return;
+    }
+    
+    if (selectedMethod === 'wame') {
+        // Send via wa.me
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        const encodedMessage = encodeURIComponent(message);
+        window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
+        logApiMessage('wa.me', phone, message, 'sent');
+        return;
+    }
+    
+    // Send via Meta API
+    if (!metaConfig) {
+        alert('Please configure Meta API first');
+        return;
+    }
+    
+    const url = `https://graph.facebook.com/${metaConfig.apiVersion}/${metaConfig.phoneNumberId}/messages`;
+    
+    const payload = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'text',
+        text: {
+            body: message
+        }
+    };
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${metaConfig.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            alert('Failed to send: ' + data.error.message);
+            logApiMessage('Meta API', phone, message, 'failed');
+        } else {
+            alert('Message sent successfully!');
+            logApiMessage('Meta API', phone, message, 'sent');
+        }
+    } catch (error) {
+        alert('Failed to send: ' + error.message);
+        logApiMessage('Meta API', phone, message, 'failed');
+    }
+};
+
+function updateConnectionStatus(connected) {
+    const statusDiv = document.getElementById('connectionStatus');
+    
+    if (connected) {
+        statusDiv.className = 'connector-status status-connected';
+        statusDiv.innerHTML = '<i class="fas fa-circle"></i> <strong>Status:</strong> Connected to Meta WhatsApp API';
+    } else {
+        statusDiv.className = 'connector-status status-disconnected';
+        statusDiv.innerHTML = '<i class="fas fa-circle"></i> <strong>Status:</strong> Not Connected to Meta WhatsApp API';
+    }
+}
+
+function logApiMessage(method, phone, message, status) {
+    const logDiv = document.getElementById('apiMessageLog');
+    const existingContent = logDiv.innerHTML;
+    
+    const statusClass = status === 'sent' ? 'status-sent' : 'status-failed';
+    const statusText = status === 'sent' ? 'Sent' : 'Failed';
+    
+    const newEntry = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <strong>${method}</strong> → ${phone}
+                <br><small class="text-muted">${message.substring(0, 50)}...</small>
+            </div>
+            <span class="message-status-badge ${statusClass}">${statusText}</span>
+        </div>
+    `;
+    
+    if (existingContent.includes('No messages')) {
+        logDiv.innerHTML = newEntry;
+    } else {
+        logDiv.innerHTML = newEntry + existingContent;
+    }
+}
+
+// Initialize
+loadMetaConfig();
+const savedMethod = localStorage.getItem('selected_send_method');
+if (savedMethod) {
+    selectMethod(savedMethod);
+}
+</script>
