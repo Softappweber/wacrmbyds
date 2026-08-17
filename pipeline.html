@@ -1,0 +1,244 @@
+<style>
+    .kanban-board {
+        display: flex;
+        gap: 15px;
+        overflow-x: auto;
+        padding-bottom: 20px;
+        min-height: 500px;
+    }
+    .kanban-column {
+        background: #f8f9fa;
+        border-radius: 10px;
+        min-width: 250px;
+        max-width: 250px;
+        padding: 15px;
+        flex-shrink: 0;
+    }
+    .kanban-column-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    .kanban-column-title {
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .kanban-count {
+        background: #e0e0e0;
+        padding: 2px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+    }
+    .kanban-card {
+        background: white;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        cursor: grab;
+        transition: all 0.2s;
+        border-left: 3px solid #25D366;
+    }
+    .kanban-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .kanban-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+    .kanban-card-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+    .kanban-card-phone {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+    }
+    .kanban-card-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .kanban-tag {
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+    .column-New { border-top: 3px solid #1976d2; }
+    .column-Contacted { border-top: 3px solid #f57c00; }
+    .column-Interested { border-top: 3px solid #7b1fa2; }
+    .column-Converted { border-top: 3px solid #388e3c; }
+    .column-Lost { border-top: 3px solid #d32f2f; }
+    .drop-zone {
+        min-height: 50px;
+        transition: all 0.3s;
+    }
+    .drop-zone.drag-over {
+        background: #e8f5e9;
+        border-radius: 8px;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-columns"></i> Leads Pipeline</h3>
+    <button class="btn btn-outline-primary" onclick="loadPipeline()">
+        <i class="fas fa-sync"></i> Refresh
+    </button>
+</div>
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> 
+    Drag and drop lead cards between columns to change their status.
+</div>
+
+<div class="kanban-board" id="kanbanBoard">
+    <!-- Columns load here -->
+</div>
+
+<script>
+let pipelineLeads = [];
+const statuses = ['New', 'Contacted', 'Interested', 'Converted', 'Lost'];
+const statusColors = {
+    'New': '#1976d2',
+    'Contacted': '#f57c00',
+    'Interested': '#7b1fa2',
+    'Converted': '#388e3c',
+    'Lost': '#d32f2f'
+};
+
+async function loadPipeline() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: leads } = await window.supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+    
+    pipelineLeads = leads || [];
+    displayBoard();
+}
+
+function displayBoard() {
+    const board = document.getElementById('kanbanBoard');
+    
+    board.innerHTML = statuses.map(status => {
+        const statusLeads = pipelineLeads.filter(lead => lead.status === status);
+        
+        return `
+            <div class="kanban-column column-${status}" data-status="${status}">
+                <div class="kanban-column-header">
+                    <span class="kanban-column-title" style="color: ${statusColors[status]};">${status}</span>
+                    <span class="kanban-count">${statusLeads.length}</span>
+                </div>
+                <div class="drop-zone" data-status="${status}" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                    ${statusLeads.map(lead => `
+                        <div class="kanban-card" draggable="true" data-lead-id="${lead.id}" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" style="border-left-color: ${statusColors[status]};">
+                            <div class="kanban-card-name">${lead.name}</div>
+                            <div class="kanban-card-phone">
+                                <i class="fas fa-phone"></i> ${lead.phone}
+                            </div>
+                            ${lead.company ? `<div class="kanban-card-phone"><i class="fas fa-building"></i> ${lead.company}</div>` : ''}
+                            ${lead.tags ? `
+                                <div class="kanban-card-tags">
+                                    ${lead.tags.split(',').map(tag => `<span class="kanban-tag">${tag.trim()}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                            <div class="d-flex justify-content-between mt-2">
+                                <button class="btn btn-sm btn-success" onclick="openWhatsApp('${lead.phone}')">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="editLeadFromPipeline(${lead.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${statusLeads.length === 0 ? '<div class="text-center text-muted py-3" style="font-size: 12px;">No leads</div>' : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Drag and Drop Functions
+window.handleDragStart = function(event) {
+    event.target.classList.add('dragging');
+    event.dataTransfer.setData('leadId', event.target.dataset.leadId);
+    event.dataTransfer.effectAllowed = 'move';
+};
+
+window.handleDragEnd = function(event) {
+    event.target.classList.remove('dragging');
+};
+
+window.handleDragOver = function(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    event.target.closest('.drop-zone').classList.add('drag-over');
+};
+
+window.handleDragLeave = function(event) {
+    event.target.closest('.drop-zone').classList.remove('drag-over');
+};
+
+window.handleDrop = async function(event) {
+    event.preventDefault();
+    event.target.closest('.drop-zone').classList.remove('drag-over');
+    
+    const leadId = event.dataTransfer.getData('leadId');
+    const newStatus = event.target.closest('.drop-zone').dataset.status;
+    
+    if (!leadId || !newStatus) return;
+    
+    // Update lead status
+    const { error } = await window.supabase
+        .from('leads')
+        .update({ status: newStatus })
+        .eq('id', leadId);
+    
+    if (error) {
+        alert('Failed to update status: ' + error.message);
+    } else {
+        // Log activity
+        const { data: { user } } = await window.supabase.auth.getUser();
+        if (user) {
+            await window.supabase.from('activity_log').insert([{
+                user_id: user.id,
+                action: 'Lead Status Changed',
+                details: `Lead moved to ${newStatus}`
+            }]);
+        }
+        
+        loadPipeline();
+    }
+};
+
+window.openWhatsApp = function(phone) {
+    window.open('https://wa.me/' + phone.replace(/[^0-9]/g, ''), '_blank');
+};
+
+window.editLeadFromPipeline = function(id) {
+    // Navigate to leads page
+    window.loadFeature('leads.html');
+    
+    // Wait for leads page to load, then open edit modal
+    setTimeout(async () => {
+        if (window.editLead) {
+            window.editLead(id);
+        }
+    }, 1000);
+};
+
+// Initialize
+loadPipeline();
+</script>
