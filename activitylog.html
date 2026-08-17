@@ -1,0 +1,207 @@
+<style>
+    .activity-item {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        font-size: 18px;
+    }
+    .icon-lead { background-color: #e3f2fd; color: #1976d2; }
+    .icon-whatsapp { background-color: #e8f5e9; color: #25D366; }
+    .icon-template { background-color: #f3e5f5; color: #7b1fa2; }
+    .icon-followup { background-color: #fff3e0; color: #f57c00; }
+    .icon-bulk { background-color: #fce4ec; color: #c2185b; }
+    .activity-time {
+        font-size: 12px;
+        color: #999;
+    }
+</style>
+
+<div class="d-flex justify-content-between mb-3">
+    <h3><i class="fas fa-history"></i> Activity Log</h3>
+    <button class="btn btn-outline-primary" onclick="clearAllActivities()">
+        <i class="fas fa-trash"></i> Clear All
+    </button>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input type="text" id="activitySearch" class="form-control" placeholder="Search activities..." onkeyup="filterActivities()">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Filter by Type</label>
+                <select id="activityTypeFilter" class="form-select" onchange="filterActivities()">
+                    <option value="all">All Types</option>
+                    <option value="Lead">Lead</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Template">Template</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Bulk">Bulk Send</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Filter by Date</label>
+                <select id="activityDateFilter" class="form-select" onchange="filterActivities()">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">Last 30 Days</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity List -->
+<div class="card">
+    <div class="card-body">
+        <div id="activityList"></div>
+    </div>
+</div>
+
+<script>
+let allActivities = [];
+
+async function loadActivities() {
+    const { data: { user } } = await window.supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data: activities } = await window.supabase
+        .from('activity_log')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+    
+    allActivities = activities || [];
+    displayActivities(allActivities);
+}
+
+function displayActivities(activities) {
+    if (activities.length === 0) {
+        document.getElementById('activityList').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                <h5>No activities yet</h5>
+                <p class="text-muted">Your actions will appear here</p>
+            </div>
+        `;
+        return;
+    }
+    
+    document.getElementById('activityList').innerHTML = activities.map(activity => {
+        let iconClass = 'icon-lead';
+        let icon = 'fa-user';
+        
+        if (activity.action.includes('WhatsApp')) {
+            iconClass = 'icon-whatsapp';
+            icon = 'fa-whatsapp';
+        } else if (activity.action.includes('Template')) {
+            iconClass = 'icon-template';
+            icon = 'fa-envelope';
+        } else if (activity.action.includes('Follow')) {
+            iconClass = 'icon-followup';
+            icon = 'fa-clock';
+        } else if (activity.action.includes('Bulk')) {
+            iconClass = 'icon-bulk';
+            icon = 'fa-bulk';
+        }
+        
+        return `
+            <div class="activity-item d-flex align-items-start">
+                <div class="activity-icon ${iconClass}">
+                    <i class="fab ${icon}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <strong>${activity.action}</strong>
+                    ${activity.details ? `<br><span class="text-muted">${activity.details}</span>` : ''}
+                </div>
+                <div class="activity-time">
+                    ${new Date(activity.created_at).toLocaleString()}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.filterActivities = function() {
+    const search = document.getElementById('activitySearch').value.toLowerCase();
+    const typeFilter = document.getElementById('activityTypeFilter').value;
+    const dateFilter = document.getElementById('activityDateFilter').value;
+    
+    let filtered = allActivities;
+    
+    // Search filter
+    if (search) {
+        filtered = filtered.filter(a => 
+            a.action.toLowerCase().includes(search) ||
+            (a.details && a.details.toLowerCase().includes(search))
+        );
+    }
+    
+    // Type filter
+    if (typeFilter !== 'all') {
+        filtered = filtered.filter(a => a.action.includes(typeFilter));
+    }
+    
+    // Date filter
+    if (dateFilter !== 'all') {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        filtered = filtered.filter(a => {
+            const activityDate = new Date(a.created_at);
+            
+            if (dateFilter === 'today') {
+                return activityDate >= today;
+            } else if (dateFilter === 'yesterday') {
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                return activityDate >= yesterday && activityDate < today;
+            } else if (dateFilter === 'week') {
+                const weekAgo = new Date(today);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                return activityDate >= weekAgo;
+            } else if (dateFilter === 'month') {
+                const monthAgo = new Date(today);
+                monthAgo.setDate(monthAgo.getDate() - 30);
+                return activityDate >= monthAgo;
+            }
+            return true;
+        });
+    }
+    
+    displayActivities(filtered);
+};
+
+window.clearAllActivities = async function() {
+    if (confirm('Are you sure you want to clear all activity logs?')) {
+        const { data: { user } } = await window.supabase.auth.getUser();
+        if (!user) return;
+        
+        await window.supabase
+            .from('activity_log')
+            .delete()
+            .eq('user_id', user.id);
+        
+        loadActivities();
+    }
+};
+
+loadActivities();
+</script>
