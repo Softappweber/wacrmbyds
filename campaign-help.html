@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Help Guide - WhatsApp CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .help-header {
+            background: linear-gradient(135deg, #0f0f1e, #1a1a2e);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .help-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .help-header p {
+            opacity: 0.8;
+            font-size: 16px;
+        }
+        .help-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        .help-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .help-section h2 {
+            font-size: 20px;
+            color: #1a1a2e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-section h2 i {
+            color: #25D366;
+        }
+        .help-section p {
+            color: #555;
+            margin-bottom: 12px;
+        }
+        .help-section ul {
+            padding-left: 20px;
+        }
+        .help-section li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        .example-box {
+            background-color: #f0fff4;
+            border-left: 4px solid #25D366;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .example-box strong {
+            color: #128C7E;
+        }
+        .step-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background-color: #25D366;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .tip-box {
+            background-color: #fff3e0;
+            border-left: 4px solid #f57c00;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .tip-box strong {
+            color: #f57c00;
+        }
+        .warning-box {
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .warning-box strong {
+            color: #d32f2f;
+        }
+        .success-story {
+            background-color: #e8f5e9;
+            border-left: 4px solid #388e3c;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+<a href="javascript:window.close()" class="btn btn-light back-btn">
+    <i class="fas fa-times"></i> Close
+</a>
+
+<div class="help-header">
+    <i class="fas fa-bullhorn" style="font-size: 40px; color: #25D366;"></i>
+    <h1>How to Run a Campaign?</h1>
+    <p>Step-by-step guide to successful WhatsApp marketing campaigns</p>
+</div>
+
+<div class="help-container">
+
+    <!-- What is a Campaign -->
+    <div class="help-section">
+        <h2><i class="fas fa-bullhorn"></i> What is a Campaign?</h2>
+        <p>
+            A campaign is a planned marketing effort to reach a group of people with a specific message and goal.
+            Think of it like running a promotion in your shop — you decide what to offer, who to tell, and when to tell them.
+        </p>
+        <div class="example-box">
+            <strong>Simple example:</strong> You own a clothing shop. You want to tell 50 customers about your 
+            "Buy 2 Get 1 Free" offer this weekend. That's a campaign!
+        </div>
+    </div>
+
+    <!-- Campaign Status Explained -->
+    <div class="help-section">
+        <h2><i class="fas fa-info-circle"></i> Campaign Status Explained</h2>
+        <ul>
+            <li><strong>Draft:</strong> You're still planning, not ready to send yet</li>
+            <li><strong>Active:</strong> Campaign is running, messages are being sent</li>
+            <li><strong>Paused:</strong> Temporarily stopped, can resume anytime</li>
+            <li><strong>Completed:</strong> Campaign is finished, goal achieved or time ended</li>
+        </ul>
+        <div class="example-box">
+            <strong>Example:</strong> You create a "Diwali Sale" campaign as Draft on Oct 1. 
+            On Oct 15 you make it Active. During the sale you Pause it for 2 days. 
+            After Diwali, you mark it Completed.
+        </div>
+    </div>
+
+    <!-- How to Create a Campaign -->
+    <div class="help-section">
+        <h2><i class="fas fa-plus-circle"></i> How to Create a Campaign (Step-by-Step)</h2>
+        
+        <div class="step-box">
+            <p><span class="step-number">1</span><strong>Click "Create Campaign"</strong></p>
+            <p>On the Campaigns page, click the green "Create Campaign" button.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">2</span><strong>Give Your Campaign a Name</strong></p>
+            <p>Use a clear, memorable name.</p>
+            <div class="example-box">
+                <strong>Good names:</strong> "Diwali Sale 2025", "New Product Launch", "January Follow-up"
+            </div>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">3</span><strong>Write a Description</strong></p>
+            <p>Briefly explain what this campaign is about. This is for your reference only.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">4</span><strong>Set a Goal</strong></p>
+            <p>What do you want to achieve?</p>
+            <div class="example-box">
+                <strong>Examples:</strong> "Get 20 new orders", "50 responses", "100 leads converted"
+            </div>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">5</span><strong>Choose Start and End Dates</strong></p>
+            <p>When should this campaign run? Leave empty for no specific dates.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">6</span><strong>Select Status</strong></p>
+            <p>Start with "Draft" if planning, or "Active" if ready to go.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">7</span><strong>Select a Template</strong></p>
+            <p>Choose a message template you've created in the Templates page. This is the message that will be sent.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">8</span><strong>Click "Create Campaign"</strong></p>
+            <p>Your campaign is now created! Next step: assign leads.</p>
+        </div>
+    </div>
+
+    <!-- How to Assign Leads -->
+    <div class="help-section">
+        <h2><i class="fas fa-user-plus"></i> How to Assign Leads to a Campaign</h2>
+        
+        <div class="step-box">
+            <p><span class="step-number">1</span><strong>Find Your Campaign</strong></p>
+            <p>On the Campaigns page, locate your campaign card.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">2</span><strong>Click the User-Plus Icon</strong></p>
+            <p>This opens the "Assign Leads" window.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">3</span><strong>Search and Select Leads</strong></p>
+            <p>Use the search box to find specific leads, or click "Select All" to add everyone.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">4</span><strong>Click "Assign"</strong></p>
+            <p>Your selected leads are now part of this campaign.</p>
+        </div>
+        
+        <div class="tip-box">
+            <strong>Tip:</strong> You can assign the same lead to multiple campaigns. 
+            For example, a lead can be in both "Welcome Campaign" and "Diwali Sale".
+        </div>
+    </div>
+
+    <!-- How to Send Campaign Messages -->
+    <div class="help-section">
+        <h2><i class="fab fa-whatsapp"></i> How to Send Campaign Messages</h2>
+        
+        <div class="step-box">
+            <p><span class="step-number">1</span><strong>Click WhatsApp Icon on Campaign</strong></p>
+            <p>Find your campaign card and click the green WhatsApp button.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">2</span><strong>System Opens WhatsApp</strong></p>
+            <p>WhatsApp Web will open for each lead one by one with your message pre-filled.</p>
+        </div>
+        
+        <div class="step-box">
+            <p><span class="step-number">3</span><strong>Click Send in WhatsApp</strong></p>
+            <p>You just click Send in each WhatsApp tab. The message is already typed for you.</p>
+        </div>
+        
+        <div class="warning-box">
+            <strong>Important:</strong> With wa.me (free method), you must click Send manually for each message. 
+            With Meta API (automated), messages go automatically without any clicking.
+        </div>
+    </div>
+
+    <!-- Campaign Examples -->
+    <div class="help-section">
+        <h2><i class="fas fa-lightbulb"></i> Campaign Examples (Real Life)</h2>
+        
+        <div class="success-story">
+            <strong>Example 1: Product Launch</strong><br>
+            <strong>Campaign:</strong> "New iPhone 16 Launch"<br>
+            <strong>Goal:</strong> Get 100 pre-orders<br>
+            <strong>Leads:</strong> All customers who bought iPhone 15<br>
+            <strong>Message:</strong> "Hi {name}! iPhone 16 is here! Pre-order today and get 10% off. Reply YES for details."
+        </div>
+        
+        <div class="success-story">
+            <strong>Example 2: Festival Sale</strong><br>
+            <strong>Campaign:</strong> "Diwali Special"<br>
+            <strong>Goal:</strong> 50 sales in 1 week<br>
+            <strong>Leads:</strong> All leads in "Interested" status<br>
+            <strong>Message:</strong> "Happy Diwali {name}! Our special Diwali sale starts today. Up to 50% off. Visit our store!"
+        </div>
+        
+        <div class="success-story">
+            <strong>Example 3: Follow-up Campaign</strong><br>
+            <strong>Campaign:</strong> "January Follow-up"<br>
+            <strong>Goal:</strong> Convert old leads<br>
+            <strong>Leads:</strong> Leads who haven't responded in 30 days<br>
+            <strong>Message:</strong> "Hi {name}, we miss you! Here's a special welcome-back offer just for you."
+        </div>
+    </div>
+
+    <!-- Tracking Campaign Performance -->
+    <div class="help-section">
+        <h2><i class="fas fa-chart-bar"></i> Tracking Campaign Performance</h2>
+        <p>On each campaign card, you can see:</p>
+        <ul>
+            <li><strong>Leads:</strong> How many leads are assigned</li>
+            <li><strong>Messages:</strong> How many messages sent</li>
+            <li><strong>Responses:</strong> How many leads replied</li>
+            <li><strong>Conversions:</strong> How many became customers</li>
+        </ul>
+        <div class="tip-box">
+            <strong>Tip:</strong> A good campaign has high response rate. 
+            If responses are low, try changing your message or targeting different leads.
+        </div>
+    </div>
+
+    <!-- Common Mistakes -->
+    <div class="help-section">
+        <h2><i class="fas fa-exclamation-triangle"></i> Common Mistakes to Avoid</h2>
+        <div class="warning-box">
+            <strong>Mistake 1:</strong> Sending too many messages at once — this can get your number blocked.
+            <br><strong>Solution:</strong> Send in batches of 20-30 with gaps.
+        </div>
+        <div class="warning-box">
+            <strong>Mistake 2:</strong> Generic messages — people ignore "Dear Customer" messages.
+            <br><strong>Solution:</strong> Use {name} variable to personalize every message.
+        </div>
+        <div class="warning-box">
+            <strong>Mistake 3:</strong> No follow-up — most sales happen after 2-3 follow-ups.
+            <br><strong>Solution:</strong> Create a follow-up campaign after your main campaign.
+        </div>
+    </div>
+
+    <!-- Quick Checklist -->
+    <div class="help-section">
+        <h2><i class="fas fa-check-circle"></i> Campaign Checklist</h2>
+        <p>Before you launch, check:</p>
+        <ul>
+            <li>✅ Campaign name is clear</li>
+            <li>✅ Message template is ready</li>
+            <li>✅ Leads are assigned</li>
+            <li>✅ Start date is set</li>
+            <li>✅ Goal is defined</li>
+            <li>✅ Message has {name} for personalization</li>
+            <li>✅ You've tested with your own number first</li>
+        </ul>
+    </div>
+
+</div>
+
+</body>
+</html>
