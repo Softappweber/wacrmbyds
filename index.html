@@ -713,17 +713,25 @@ window.signup = async function() {
 };
 
 window.login = async function() {
-    const { error } = await supabase.auth.signInWithPassword({
-        email: document.getElementById('loginEmail').value,
-        password: document.getElementById('loginPassword').value
-    });
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
     if (error) {
         const msg = document.getElementById('authMessage');
         msg.textContent = error.message;
         msg.className = 'mt-2 text-danger';
+        return;
+    }
+    
+    // Check trial access
+    const hasAccess = await checkTrialAccess(data.user);
+    
+    if (hasAccess) {
+        showDashboard(data.user);
     }
 };
-
 window.logout = async function() { await supabase.auth.signOut(); };
 
 window.toggleSidebar = function() {
