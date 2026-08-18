@@ -814,6 +814,78 @@ window.installPWA = async function() {
         alert('To install:\n\nAndroid: Chrome menu → Add to Home Screen\n\niPhone: Safari → Share → Add to Home Screen');
     }
 };
+
+    // Trial Management System
+async function checkTrialAccess(user) {
+    if (!user) return false;
+    
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+    
+    if (!profile) {
+        // New user - create trial profile
+        const trialStart = new Date();
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + 5);
+        
+        await supabase.from('profiles').insert([{
+            user_id: user.id,
+            full_name: user.email,
+            trial_start_date: trialStart.toISOString().split('T')[0],
+            trial_end_date: trialEnd.toISOString().split('T')[0],
+            is_paid: false,
+            plan_type: 'trial'
+        }]);
+        
+        return true; // Trial just started
+    }
+    
+    // Check if trial expired
+    if (!profile.is_paid) {
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (today > profile.trial_end_date) {
+            // Trial expired
+            showTrialExpiredScreen(profile);
+            return false;
+        } else {
+            // Trial active
+            updateTrialRemaining(profile);
+            return true;
+        }
+    }
+    
+    // Paid user - check plan
+    return true;
+}
+
+function showTrialExpiredScreen(profile) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('trialExpiredScreen').style.display = 'block';
+    
+    document.getElementById('trialEndDate').textContent = profile.trial_end_date;
+}
+
+function updateTrialRemaining(profile) {
+    const today = new Date();
+    const trialEnd = new Date(profile.trial_end_date);
+    const daysLeft = Math.ceil((trialEnd - today) / (1000 * 60 * 60 * 24));
+    
+    // Show remaining days in topbar
+    const reminderDiv = document.getElementById('trialReminder');
+    if (reminderDiv) {
+        if (daysLeft <= 2) {
+            reminderDiv.innerHTML = `⚠️ Trial ends in ${daysLeft} day(s) - <a href="https://softappweber.github.io/wacrm/payment-gateway.html" target="_blank">Upgrade Now</a>`;
+            reminderDiv.style.display = 'block';
+        } else {
+            reminderDiv.style.display = 'none';
+        }
+    }
+}
     
 </script>
 
